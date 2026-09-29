@@ -1,0 +1,130 @@
+/* Short, one-time motion. All content is readable before JS enhancement. */
+.reveal {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-ready .reveal {
+    transition: opacity 650ms ease var(--reveal-delay, 0ms),
+      transform 650ms cubic-bezier(.2, .65, .3, 1) var(--reveal-delay, 0ms);
+  }
+
+  .motion-ready .reveal:not(.visible) {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  .hero h1 .hero-title::after {
+    display: block;
+    inset: auto 0 -.09em;
+    height: .055em;
+    border-radius: 99px;
+    background: var(--red);
+    box-shadow: none;
+    transform: scaleX(1);
+    transform-origin: left center;
+    opacity: .7;
+  }
+
+  .motion-ready .hero-copy:not(.visible) .hero-title::after {
+    transform: scaleX(0);
+  }
+
+  .motion-ready .hero-copy.visible .hero-title::after {
+    animation: brand-underline 750ms cubic-bezier(.2, .65, .3, 1) 400ms both;
+  }
+
+  .motion-ready .pickup-route.has-arrived .pickup-route-travel {
+    animation: pickup-arrival 4200ms cubic-bezier(.35, 0, .25, 1) both;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .site-header .logo:hover .logo-image {
+      transform-origin: 50% 15%;
+      animation: hanger-sway 700ms ease-in-out;
+    }
+
+    .motion-ready .item-card.visible:hover {
+      transform: translateY(-5px);
+      transition-delay: 0ms;
+    }
+
+    .button, .header-cta, .submit-button {
+      transition: transform 180ms ease, background-color 180ms ease;
+    }
+
+    .button:hover, .header-cta:hover, .submit-button:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.pickup-route {
+  position: relative;
+  height: 68px;
+  margin: -18px 0 28px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pickup-route::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 9px;
+  border-bottom: 1px dashed #cbd4dc;
+}
+
+.pickup-route-travel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: calc(100% - 64px);
+  height: 64px;
+  transform: translateX(100%);
+  z-index: 1;
+}
+
+.pickup-route-travel img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  background: #fff;
+}
+
+.motion-ready .pickup-route:not(.has-arrived) .pickup-route-travel {
+  transform: translateX(0);
+}
+
+@keyframes brand-underline {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes pickup-arrival {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes hanger-sway {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-9deg); }
+  55% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+}
+
+@media (max-width: 560px) {
+  .pickup-route { margin-top: -10px; height: 56px; }
+  .pickup-route-travel { width: calc(100% - 52px); height: 52px; }
+  .pickup-route-travel img { width: 52px; height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .pickup-route-travel, .logo-image, .button, .header-cta, .submit-button {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .hero h1 .hero-title::after { display: none; }
+  .pickup-route-travel { transform: translateX(100%) !important; }
+}
