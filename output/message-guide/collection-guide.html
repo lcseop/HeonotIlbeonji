@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #ffffff; }
+    body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif; color: #172033; }
+    #poster {
+      width: 1440px;
+      height: 2560px;
+      padding: 74px 78px 68px;
+      background: #fff;
+      overflow: hidden;
+    }
+    header {
+      border-bottom: 8px solid #142951;
+      padding-bottom: 38px;
+      margin-bottom: 38px;
+    }
+    .brand { font-size: 34px; font-weight: 800; color: #657085; letter-spacing: -1px; }
+    h1 { margin: 8px 0 18px; font-size: 76px; line-height: 1.08; letter-spacing: -4px; color: #10254d; }
+    .phone {
+      display: inline-block;
+      padding: 18px 30px 20px;
+      border-radius: 18px;
+      background: #fff2a8;
+      color: #111827;
+      font-size: 55px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+    .column { display: flex; flex-direction: column; gap: 25px; }
+    section {
+      border: 3px solid #d7dce5;
+      border-radius: 22px;
+      padding: 25px 28px 27px;
+      background: #fff;
+    }
+    h2 {
+      margin: 0 0 13px;
+      font-size: 39px;
+      line-height: 1.12;
+      color: #103d78;
+      letter-spacing: -2px;
+    }
+    p { margin: 8px 0 0; font-size: 27px; line-height: 1.52; font-weight: 650; letter-spacing: -0.9px; }
+    .warn {
+      margin-top: 13px;
+      padding: 13px 16px;
+      border-left: 8px solid #e83e35;
+      background: #fff3f2;
+      color: #b52020;
+      font-size: 25px;
+      line-height: 1.45;
+      font-weight: 850;
+    }
+    .note {
+      margin-top: 13px;
+      padding: 13px 16px;
+      border-left: 8px solid #e7a900;
+      background: #fff9df;
+      color: #684a00;
+      font-size: 25px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+    .service {
+      border-color: #b8c9e9;
+      background: #f6f9ff;
+    }
+    .service h2 { color: #d9481d; }
+    footer {
+      margin-top: 34px;
+      padding: 25px 30px;
+      text-align: center;
+      border-radius: 20px;
+      background: #142951;
+      color: #fff;
+      font-size: 30px;
+      line-height: 1.45;
+      font-weight: 850;
+    }
+    footer strong { color: #ffe45d; font-size: 38px; }
+  </style>
+</head>
+<body>
+  <main id="poster">
+    <header>
+      <div class="brand">헌옷일번지</div>
+      <h1>수거 가능 품목 및 유의사항</h1>
+      <div class="phone">문의전화 010-4880-8259</div>
+    </header>
+
+    <div class="grid">
+      <div class="column">
+        <section>
+          <h2>헌옷</h2>
+          <p>모든 종류의 옷가지, 장갑, 모자, 스카프, 속옷, 양말 등</p>
+          <div class="warn">단체복·유니폼 및 오염이 심한 종류는 수거 불가</div>
+        </section>
+
+        <section>
+          <h2>신발</h2>
+          <p>운동화, 구두, 하이힐</p>
+          <div class="warn">마모가 심하거나 삭아서 신을 수 없는 신발은 수거 불가</div>
+          <div class="note">신발은 더운 나라로 수출하는 관계로 겨울 신발은 수거하지 않습니다.</div>
+          <div class="warn">부츠 등 겨울 신발·슬리퍼·장화·삼선슬리퍼 수거 불가</div>
+        </section>
+
+        <section>
+          <h2>가방</h2>
+          <p>핸드백, 배낭, 학생가방</p>
+          <div class="warn">하드케이스 가방·여행용 캐리어 등 제외</div>
+        </section>
+
+        <section>
+          <h2>액세서리</h2>
+          <p>넥타이, 혁띠, 인형, 목걸이, 반지, 시계 등</p>
+        </section>
+
+        <section>
+          <h2>커튼·카펫·이불</h2>
+          <p>커튼, 카펫, 담요, 극세사 이불, 누비이불</p>
+          <div class="warn">솜이불 제외</div>
+        </section>
+
+        <section>
+          <h2>주방용품</h2>
+          <p>냄비, 후라이팬</p>
+        </section>
+      </div>
+
+      <div class="column">
+        <section>
+          <h2>헌책·도서·종이</h2>
+          <p>30cm 높이로 쌓아 노끈으로 묶어주세요.</p>
+          <div class="note">양이 많을 경우 따로 일정을 잡아주시면 감사합니다.</div>
+          <div class="note">엘리베이터 없는 주택 2층 이상은 문의 후 수거 여부를 결정합니다.</div>
+        </section>
+
+        <section>
+          <h2>컴퓨터·전자제품</h2>
+          <p>PC 본체, 모니터, 노트북, 에어컨, TV</p>
+        </section>
+
+        <section>
+          <h2>대형 가전·피아노</h2>
+          <p>냉장고, 세탁기, 피아노</p>
+          <div class="note">냉장고·세탁기 등 가전제품은 고장이 없고 7년 이하 연식인 경우 유상 수거합니다.</div>
+        </section>
+
+        <section>
+          <h2>기타 수거 품목</h2>
+          <p>장식품, 민속품, 놋그릇, 중고 스마트폰</p>
+          <p>레코드판, 수석, 미싱, 사용하지 않은 생필품, 시계</p>
+          <div class="note">기타 잡다한 물품은 문의해주세요.</div>
+        </section>
+
+        <section class="service">
+          <h2>정리·처리 서비스</h2>
+          <p>고인 유품 정리</p>
+          <p>가정 폐기물 처리</p>
+          <p>사무실 정리</p>
+          <p>간단한 심부름</p>
+        </section>
+      </div>
+    </div>
+
+    <footer>
+      수거 가능 여부가 궁금하시면<br />
+      <strong>010-4880-8259</strong>로 문의해주세요.
+    </footer>
+  </main>
+</body>
+</html>

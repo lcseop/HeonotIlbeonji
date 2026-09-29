@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>네이버 블로그 순차 문자 바꾸기</title>
+    <link rel="stylesheet" href="batch.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">NAVER BLOG BATCH REPLACER</p>
+          <h1>블로그 글 순차 문자 바꾸기</h1>
+          <p class="lead">글을 하나씩 열어 문자를 바꾼 뒤, 사용자가 직접 발행하는 안전한 순차 작업 도구입니다.</p>
+        </div>
+        <span class="version">v3.2.1</span>
+      </header>
+
+      <section class="card settings">
+        <div class="locked-grid">
+          <label>블로그 아이디<input id="blogId" value="sajin1366" readonly /></label>
+          <label>카테고리 번호<input id="categoryNo" value="2" readonly /></label>
+          <label>예상 글 수<input value="216" readonly /></label>
+        </div>
+        <div class="replace-grid">
+          <label>찾을 문자<textarea id="findText" rows="3" placeholder="예: 010-8882-7719"></textarea></label>
+          <span class="arrow" aria-hidden="true">→</span>
+          <label>바꿀 문자<textarea id="replaceText" rows="3" placeholder="예: 010-4880-8259"></textarea></label>
+        </div>
+        <div class="options">
+          <label class="check"><input id="matchCase" type="checkbox" checked /> 대소문자 정확히 구분</label>
+        </div>
+      </section>
+
+      <section class="actions">
+        <button id="scanButton" class="primary">1. 번호가 있는 글만 찾기</button>
+        <button id="nextButton" disabled>2. 다음 글 열고 문자 바꾸기</button>
+      </section>
+
+      <section class="card progress-card">
+        <div class="progress-head">
+          <strong id="statusTitle">준비</strong>
+          <span id="progressText">0 / 0</span>
+        </div>
+        <div class="track"><span id="progressBar"></span></div>
+        <p id="statusMessage">찾을 문자와 바꿀 문자를 입력한 뒤 대상 찾기를 눌러주세요.</p>
+      </section>
+
+      <section class="stats">
+        <article><span>검색된 글</span><strong id="scannedCount">0</strong></article>
+        <article><span>작업 대상</span><strong id="matchedCount">0</strong></article>
+        <article><span>남은 글</span><strong id="occurrenceCount">0</strong></article>
+        <article><span>변경 완료</span><strong id="successCount">0</strong></article>
+        <article><span>실패</span><strong id="failureCount">0</strong></article>
+      </section>
+
+      <section class="card results-card">
+        <div class="results-head">
+          <h2>대상 및 작업 결과</h2>
+          <button id="downloadButton" class="small" disabled>결과 CSV 저장</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상태</th><th>글 제목</th><th>교체</th><th>글 번호</th></tr></thead>
+            <tbody id="resultBody"><tr><td colspan="4" class="empty">아직 검사하지 않았습니다.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside>
+        <strong>사용 순서</strong>
+        ‘다음 글 열고 문자 바꾸기’를 누르면 작업 탭이 열립니다. 변경 내용을 확인하고 네이버의 발행 버튼을 직접 누른 뒤, 이 화면으로 돌아와 다시 다음 버튼을 누르세요. 실패한 글은 기록하고 다음 글로 넘어갈 수 있습니다.
+      </aside>
+    </main>
+    <script src="batch.js"></script>
+  </body>
+</html>

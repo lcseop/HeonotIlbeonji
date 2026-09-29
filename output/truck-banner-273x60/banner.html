@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 5460px; height: 1200px; overflow: hidden; }
+    body { font-family: "Malgun Gothic", "Noto Sans KR", Arial, sans-serif; }
+    .banner {
+      position: relative; width: 5460px; height: 1200px; overflow: hidden;
+      background: #ffd800; border: 30px solid #071e4c;
+    }
+    .mascot-zone {
+      position: absolute; left: 12px; top: 6px; width: 1010px; height: 870px; overflow: hidden;
+    }
+    .mascot {
+      position: absolute; width: 1050px; height: 1020px; left: -45px; top: -80px;
+      object-fit: cover; object-position: center 31%;
+      -webkit-mask-image: radial-gradient(ellipse 84% 76% at 46% 48%, #000 65%, transparent 89%);
+      mask-image: radial-gradient(ellipse 84% 76% at 46% 48%, #000 65%, transparent 89%);
+    }
+    .brand {
+      position: absolute; left: 82px; bottom: 38px; padding: 18px 40px 23px;
+      background: #071e4c; border: 13px solid #fff; border-radius: 44px;
+      color: #fff; font-size: 84px; font-weight: 1000; line-height: 1;
+      letter-spacing: -6px; white-space: nowrap; box-shadow: 0 0 0 8px #071e4c;
+    }
+    .right-zone {
+      position: absolute; left: 1005px; right: 36px; top: 23px; height: 850px;
+    }
+    .headline {
+      position: relative; height: 300px; display: flex; align-items: center;
+      justify-content: center; gap: 55px; white-space: nowrap;
+    }
+    .headline span {
+      font-size: 305px; line-height: .9; font-weight: 1000; letter-spacing: -24px;
+      text-shadow: -13px -13px 0 #fff, 13px -13px 0 #fff,
+        -13px 13px 0 #fff, 13px 13px 0 #fff, 0 18px 0 rgba(0,0,0,.11);
+    }
+    .headline .a { color: #071e4c; }
+    .headline .b { color: #f04413; }
+    .cards { position: absolute; left: 0; right: 0; top: 315px; height: 525px; }
+    .row { display: grid; height: 250px; gap: 18px; margin-bottom: 18px; }
+    .row.six { grid-template-columns: repeat(6, 1fr); }
+    .row.five { grid-template-columns: repeat(5, 1fr); }
+    .card {
+      min-width: 0; height: 250px; overflow: hidden; background: #fff;
+      border: 10px solid #071e4c; border-radius: 34px;
+      display: grid; grid-template-rows: 142px 1fr; box-shadow: 0 8px 0 rgba(0,0,0,.10);
+    }
+    .icon {
+      display: flex; align-items: center; justify-content: center;
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      font-size: 105px; line-height: 1; background: #fffef2;
+    }
+    .label {
+      display: flex; align-items: center; justify-content: center; padding: 0 10px 7px;
+      background: #071e4c; color: #fff; font-size: 59px; line-height: 1;
+      font-weight: 1000; letter-spacing: -5px; white-space: nowrap;
+    }
+    .label.long { font-size: 50px; letter-spacing: -5px; }
+    .card.accent .label { color: #ffdc19; }
+    .card.green .label { color: #7ee3a2; }
+    .phone-band {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 285px;
+      background: #071e4c; border-top: 15px solid #fff;
+      display: flex; align-items: center; justify-content: center; gap: 58px; color: #fff;
+    }
+    .phone-label {
+      padding: 18px 30px 22px; border: 7px solid #7ee3a2; border-radius: 28px;
+      color: #7ee3a2; font-size: 72px; font-weight: 1000; line-height: 1; white-space: nowrap;
+    }
+    .phone {
+      color: #ffdc19; font-size: 220px; line-height: .9; font-weight: 1000;
+      letter-spacing: -11px; white-space: nowrap;
+      text-shadow: -8px -8px 0 #fff, 8px -8px 0 #fff, -8px 8px 0 #fff, 8px 8px 0 #fff;
+    }
+    .burst { position: absolute; z-index: 5; width: 18px; height: 92px; border-radius: 10px; background: #f04413; }
+    .b1 { left: 38px; top: 42px; transform: rotate(-38deg); }
+    .b2 { left: 80px; top: 21px; transform: rotate(-11deg); }
+    .b3 { left: 118px; top: 38px; transform: rotate(25deg); background: #43c997; }
+  </style>
+</head>
+<body>
+  <main class="banner">
+    <span class="burst b1"></span><span class="burst b2"></span><span class="burst b3"></span>
+    <section class="mascot-zone">
+      <img class="mascot" src="worker-mascot-yellow.png" alt="" />
+      <div class="brand">헌옷일번지</div>
+    </section>
+    <section class="right-zone">
+      <div class="headline"><span class="a">오만가지</span><span class="b">다 산다</span></div>
+      <div class="cards">
+        <div class="row six">
+          <div class="card"><div class="icon">👕</div><div class="label">헌옷</div></div>
+          <div class="card accent"><div class="icon">📚</div><div class="label">헌책</div></div>
+          <div class="card green"><div class="icon">🍲</div><div class="label">냄비</div></div>
+          <div class="card"><div class="icon">❄️</div><div class="label">에어컨</div></div>
+          <div class="card accent"><div class="icon">🛠️</div><div class="label long">사무실 철거</div></div>
+          <div class="card green"><div class="icon">🚚</div><div class="label">이사</div></div>
+        </div>
+        <div class="row five">
+          <div class="card"><div class="icon">✈️</div><div class="label">이민</div></div>
+          <div class="card accent"><div class="icon">📦</div><div class="label">유품정리</div></div>
+          <div class="card green"><div class="icon">↩️</div><div class="label">원상복구</div></div>
+          <div class="card"><div class="icon">♻️</div><div class="label">폐기물정리</div></div>
+          <div class="card accent"><div class="icon">🍽️</div><div class="label">식당철거</div></div>
+        </div>
+      </div>
+    </section>
+    <footer class="phone-band">
+      <div class="phone-label">문의전화</div>
+      <div class="phone">010-4880-8259</div>
+    </footer>
+  </main>
+</body>
+</html>

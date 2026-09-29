@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "네이버 글 문자 바꾸기",
+  "version": "3.2.1",
+  "description": "네이버 카페와 내 블로그 글에서 원하는 문자를 찾아 바꿉니다.",
+  "permissions": ["activeTab", "debugger", "scripting", "storage", "tabs"],
+  "host_permissions": [
+    "https://cafe.naver.com/*",
+    "https://m.cafe.naver.com/*",
+    "https://blog.naver.com/*",
+    "https://*.blog.naver.com/*",
+    "https://editor.naver.com/*",
+    "https://*.editor.naver.com/*"
+  ],
+  "action": {
+    "default_title": "네이버 글 문자 바꾸기",
+    "default_popup": "popup.html"
+  }
+}

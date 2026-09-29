@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>카페 글 문자 바꾸기</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="mark" aria-hidden="true">가</span>
+        <div>
+          <h1>문자 바꾸기</h1>
+          <p>현재 열려 있는 카페 글 수정 화면</p>
+        </div>
+      </header>
+
+      <label for="findText">찾을 문자</label>
+      <textarea id="findText" rows="3" spellcheck="false" placeholder="예: 010-1234-5678"></textarea>
+
+      <label for="replaceText">바꿀 문자</label>
+      <textarea id="replaceText" rows="3" spellcheck="false" placeholder="예: 010-9876-5432"></textarea>
+
+      <label class="option">
+        <input id="matchCase" type="checkbox" checked />
+        <span>대소문자 정확히 구분</span>
+      </label>
+
+      <div class="buttons">
+        <button id="previewButton" class="secondary" type="button">미리보기</button>
+        <button id="replaceButton" class="primary" type="button">바꾸기</button>
+      </div>
+
+      <button id="undoButton" class="undo" type="button">방금 변경 되돌리기</button>
+
+      <section id="status" class="status idle" role="status" aria-live="polite">
+        수정할 글을 연 뒤 ‘미리보기’를 눌러주세요.
+      </section>
+
+      <button id="blogBatchButton" class="batch" type="button">블로그 글 순차 수정 도구 열기</button>
+
+      <p class="notice">글은 자동으로 등록되지 않습니다. 변경 내용을 확인한 뒤 네이버의 등록 버튼을 직접 눌러주세요.</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
