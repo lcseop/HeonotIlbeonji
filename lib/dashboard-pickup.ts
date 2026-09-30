@@ -14,7 +14,38 @@ function config(env: NodeJS.ProcessEnv, db?: D1Database) {
 
 export function dashboardConfiguration(env: NodeJS.ProcessEnv, db?: D1Database) {
   const settings = config(env, db);
-  return privateJson(settings ? { enabled: true, siteKey: settings.siteKey, delivery: 'dashboard' } : { enabled: false, message: unavailable });
+
+  if (!settings) {
+    return privateJson({
+      enabled: false,
+      debug: {
+        db: !!db,
+        adminPassword: !!env.ADMIN_PASSWORD,
+        adminPasswordLength: env.ADMIN_PASSWORD?.length ?? 0,
+        adminSessionSecret: !!env.ADMIN_SESSION_SECRET,
+        adminSessionSecretLength: env.ADMIN_SESSION_SECRET?.length ?? 0,
+        siteOrigin: !!env.SITE_ORIGIN,
+        siteOriginValid: (() => {
+          try {
+            const origin = new URL(env.SITE_ORIGIN || '');
+            return origin.protocol === 'https:' ||
+              ['localhost', '127.0.0.1'].includes(origin.hostname);
+          } catch {
+            return false;
+          }
+        })(),
+        turnstileSiteKey: !!env.TURNSTILE_SITE_KEY,
+        turnstileSecretKey: !!env.TURNSTILE_SECRET_KEY
+      },
+      message: unavailable
+    });
+  }
+
+  return privateJson({
+    enabled: true,
+    siteKey: settings.siteKey,
+    delivery: 'dashboard'
+  });
 }
 
 export async function submitDashboardPickup(request: Request, env: NodeJS.ProcessEnv, db?: D1Database,
