@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>수거 지역 편집 | 헌옷일번지</title>
+  <link rel="stylesheet" href="../css/area-editor.css">
+  <script src="../js/area-editor.js" defer></script>
+</head>
+<body>
+  <header class="editor-header"><a href="./index.html#area">← 홈페이지로 돌아가기</a><strong>헌옷일번지 <span>수거 지역 편집</span></strong></header>
+  <main class="editor-wrap">
+    <div class="editor-intro"><p class="eyebrow">SERVICE AREA EDITOR</p><h1>수거 범위를 직접 조정하세요.</h1><p>지역을 선택한 뒤 지도 위 점을 끌어 경계를 바꿀 수 있습니다. 도형은 정확한 행정구역 경계가 아닌 상담용 범위입니다.</p></div>
+    <div class="editor-layout">
+      <section class="editor-map-card" aria-label="수거 지역 편집 지도"><div class="editor-map-top"><span id="editorMapStatus">지도 준비 중</span><span>선택한 지역의 점을 움직이세요</span></div><div id="editorMap" class="editor-map"></div><p id="editorHint" role="status">지역을 선택하면 경계 점이 나타납니다.</p></section>
+      <aside class="editor-controls"><label for="areaSelect">편집할 지역</label><select id="areaSelect"></select><div class="name-color"><label>지역 이름<input id="areaName" type="text" maxlength="20"></label><label>표시 색상<input id="areaColor" type="color"></label></div><div class="editor-actions"><button id="addPoint" type="button">꼭짓점 추가</button><button id="removePoint" type="button">선택한 점 삭제</button></div><p class="editor-help">지도에서 점을 선택하거나 끌어 이동하세요. ‘꼭짓점 추가’를 누른 뒤 지도 위 원하는 위치를 누르면 점이 추가됩니다.</p><hr><label for="newAreaName">새 지역 추가</label><div class="new-area"><input id="newAreaName" type="text" maxlength="20" placeholder="예: 부천"><button id="addArea" type="button">추가</button></div><button id="deleteArea" class="quiet" type="button">선택한 지역 삭제</button><hr><button id="saveDraft" class="primary" type="button">이 브라우저에 임시 저장</button><button id="downloadAreas" type="button">설정 파일 다운로드</button><button id="resetAreas" class="quiet" type="button">게시된 범위로 되돌리기</button><p id="editorNotice" class="notice" role="status"></p></aside>
+    </div>
+    <p class="publish-note"><strong>사이트에 반영하려면</strong> 다운로드한 파일을 <code>public/data/service-areas.json</code>과 교체한 뒤 사이트를 다시 게시해야 합니다. 임시 저장은 이 브라우저에만 보입니다.</p>
+  </main>
+</body>
+</html>

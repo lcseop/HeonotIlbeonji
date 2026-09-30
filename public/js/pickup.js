@@ -52,7 +52,7 @@
       });
       enabled = true;
       button.disabled = false;
-      show('신청 내용은 담당자에게 문자로 전달됩니다.');
+      show(config.delivery === 'dashboard' ? '신청 내용은 관리자 신청함으로 전달됩니다.' : '신청 내용은 담당자에게 문자로 전달됩니다.');
     } catch { show(fallback, true); }
   }
 

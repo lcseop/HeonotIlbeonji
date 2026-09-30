@@ -1,9 +1,18 @@
 # 수거 신청 문자 연결
 
-신청서 → `/api/pickup` → 자동 입력 방지 확인 → SOLAPI 장문 문자(LMS) → 담당자 휴대폰.
+이 문서는 이전 SMS 방식의 설정 안내입니다. 현재 `PICKUP_DELIVERY_MODE=dashboard`에서는 문자 없이 관리자 신청함으로 접수합니다. 새 방식은 [관리자 앱 안내](admin-app.md)를 확인하세요.
+
+SMS 방식을 다시 사용할 때의 흐름: 신청서 → `/api/pickup` → 자동 입력 방지 확인 → SOLAPI 장문 문자(LMS) → 담당자 휴대폰.
 기본 수신 번호는 `01048808259`입니다. 신청자가 수신번호나 발신번호를 바꿀 수 없으며, 고객에게 자동 문자를 보내지는 않습니다.
 
 ## 실제 발송을 시작하려면
+
+이 프로젝트에는 비공개 설정 파일 `.env.local`을 준비해 두었습니다. SOLAPI 관리 화면에서 발급한 값을 이 파일의 `SOLAPI_API_KEY=`와 `SOLAPI_API_SECRET=` 뒤에 각각 붙여 넣으세요. 인증한 발신번호는 `SOLAPI_FROM=` 뒤에 숫자만 입력합니다. `PICKUP_SMS_TO=01048808259`는 신청 문자를 받을 번호입니다. 이 파일은 Git에서 제외됩니다. 비밀키를 채팅이나 공개 저장소에 올리지 마세요.
+
+로컬 확인은 프로젝트 폴더에서 `npm run dev`를 실행하고 `http://localhost:4174/html/index.html`을 엽니다. VS Code Live Server의 `:5500` 주소는 정적 파일만 제공하므로 `/api/pickup`을 실행할 수 없습니다. `SITE_ORIGIN`도 이 미리보기 주소와 정확히 일치해야 합니다.
+로컬 위젯을 시험하려면 Turnstile에 `localhost` 호스트 이름이 허용되어 있어야 합니다. 배포 후에는 실제 도메인을 Turnstile에 등록하고 `SITE_ORIGIN`도 실제 `https://` 주소로 변경합니다.
+
+키만으로는 신청서가 켜지지 않습니다. 실제 사이트 주소인 `SITE_ORIGIN`, 그 주소로 만든 Turnstile의 `TURNSTILE_SITE_KEY`와 `TURNSTILE_SECRET_KEY`까지 입력해야 합니다. 서버를 재시작한 후 `/api/pickup` 응답의 `enabled`가 `true`이면 접수 버튼이 활성화됩니다. 호스팅할 때는 `.env.local` 파일을 업로드하는 대신 호스팅 서비스의 비밀 환경변수 설정에 같은 이름과 값을 등록하세요.
 
 1. [SOLAPI](https://solapi.com)에 가입하고 발신번호를 등록·인증합니다. 고객의 전화번호를 발신번호로 쓰지 않습니다.
 2. 문자 발송 권한이 있는 API Key와 API Secret을 만들고 발송 잔액을 준비합니다. 요금은 SOLAPI의 현재 LMS 요금을 확인하세요. 이 작업에서는 계정 생성·충전·실제 문자 발송을 하지 않았습니다.

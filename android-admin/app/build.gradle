@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Firebase settings belong in the untracked google-services.json supplied by the owner.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
+def apiBaseUrl = providers.gradleProperty('apiBaseUrl').orElse('http://10.0.2.2:4174').get()
+
+android {
+    namespace 'com.heonotilbeonji.admin'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.heonotilbeonji.admin'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'API_BASE_URL', '"' + apiBaseUrl + '"'
+    }
+
+    buildTypes {
+        debug {
+            manifestPlaceholders = [cleartextTraffic: 'true']
+        }
+        release {
+            manifestPlaceholders = [cleartextTraffic: 'false']
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:34.19.0')
+    implementation 'com.google.firebase:firebase-messaging'
+}

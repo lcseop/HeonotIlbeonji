@@ -21,7 +21,7 @@ function settings(env: Environment) {
   } catch { return null; }
 }
 
-function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
+export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
   const limits = { name: 40, phone: 20, address: 150, amount: 15, date: 10, message: 350 };
   const fields: Record<string, string> = {};
   for (const [key, limit] of Object.entries(limits)) {
@@ -40,7 +40,7 @@ function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
   return fields as Pickup;
 }
 
-async function limitedJson(request: Request) {
+export async function limitedJson(request: Request) {
   const reader = request.body?.getReader();
   if (!reader) throw new Error('empty');
   const chunks: Uint8Array[] = [];

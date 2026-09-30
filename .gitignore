@@ -16,6 +16,14 @@
 /.next/
 /.vinext/
 /out/
+*.tsbuildinfo
+/android-admin/.gradle/
+/android-admin/app/build/
+/android-admin/build/
+/android-admin/local.properties
+/android-admin/app/google-services.json
+/android-admin/.android-sdk/
+/android-admin/.android-sdk-tools.zip
 
 # misc
 .DS_Store
