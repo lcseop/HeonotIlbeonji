@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dashboardConfiguration, submitDashboardPickup } from '../lib/dashboard-pickup.ts';
-import { ensureTables, makeSession, validAdminToken } from '../lib/admin.ts';
+import { deleteMemo, deletePickup, ensureTables, makeSession, saveMemo, validAdminToken } from '../lib/admin.ts';
 import { notifyAdmins } from '../lib/admin.ts';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 
@@ -44,6 +44,7 @@ test('existing pickup records gain the new columns without clearing old rows', a
   const columns = new Set(['id', 'created_at', 'name', 'phone', 'address', 'amount', 'date', 'message', 'status']);
   const changed = [];
   const db = { prepare(sql) { return {
+    bind: () => ({ run: async () => ({ meta: { changes: 0 } }) }),
     all: async () => ({ results: [...columns].map(name => ({ name })) }),
     run: async () => {
       const match = sql.match(/^ALTER TABLE pickup_requests ADD COLUMN (\w+)/);
@@ -53,7 +54,7 @@ test('existing pickup records gain the new columns without clearing old rows', a
   }; } };
   await ensureTables(db);
   await ensureTables(db);
-  assert.deepEqual(changed, ['time_slot', 'pickup_method']);
+  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at']);
   assert.ok(columns.has('id'));
 });
 
@@ -73,6 +74,21 @@ test('verified request is saved once without calling Solapi', async () => {
   assert.equal(db.inserted[0][7], '오후');
   assert.equal(db.inserted[0][8], '비대면 수거');
   assert.equal(urls.length, 1);
+});
+
+test('memo and application deletion stay scoped to the selected IDs', async () => {
+  const statements = [];
+  const db = { prepare(sql) { return {
+    all: async () => ({ results: [] }),
+    run: async () => ({ meta: { changes: 0 } }),
+    bind(...args) { statements.push({ sql, args }); return { run: async () => ({ meta: { changes: 1 } }) }; },
+  }; } };
+  const memoId = await saveMemo(db, { phone: '01012345678', name: '고객', title: '재방문', content: '오후 연락' });
+  assert.match(memoId, /^[0-9a-f-]{36}$/);
+  assert.equal(await deleteMemo(db, memoId), true);
+  assert.equal(await deletePickup(db, 'test-request-id'), true);
+  assert.ok(statements.some(item => item.sql === 'DELETE FROM customer_memos WHERE id = ?' && item.args[0] === memoId));
+  assert.ok(statements.some(item => item.sql === 'DELETE FROM pickup_requests WHERE id = ?' && item.args[0] === 'test-request-id'));
 });
 
 test('invalid origin or challenge never stores an application', async () => {

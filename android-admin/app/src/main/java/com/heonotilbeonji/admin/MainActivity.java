@@ -14,6 +14,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -31,6 +33,8 @@ import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +49,13 @@ public final class MainActivity extends Activity {
     private LinearLayout list;
     private TextView notice;
     private TextView count;
+    private JSONArray requests = new JSONArray();
+    private JSONArray memos = new JSONArray();
+    private boolean memoPage = false;
+    private int requestFilter = 0;
+    private int requestSort = 0;
+    private int memoSort = 0;
+    private String memoSearch = "";
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -162,9 +173,19 @@ public final class MainActivity extends Activity {
         actions.setPadding(dp(20), dp(25), dp(20), dp(16));
         root.addView(actions);
         actions.addView(label("ADMIN APP", 11, CORAL, true));
-        count = label("수거 신청함", 30, NAVY, true);
+        count = label(memoPage ? "고객 메모" : "수거 신청함", 30, NAVY, true);
         actions.addView(count, margins(7, 7));
-        actions.addView(label("새 신청을 확인하고 바로 연락하세요.", 14, MUTED, false));
+        actions.addView(label(memoPage ? "고객별 상담 내용을 기록하고 찾아보세요." :
+                "새 신청을 확인하고 바로 연락하세요.", 14, MUTED, false));
+        LinearLayout tabs = new LinearLayout(this);
+        actions.addView(tabs, margins(17, 0));
+        Button requestTab = button("신청서", memoPage ? MUTED : NAVY);
+        Button memoTab = button("메모", memoPage ? NAVY : MUTED);
+        tabs.addView(requestTab, new LinearLayout.LayoutParams(0, dp(44), 1));
+        LinearLayout.LayoutParams tabGap = new LinearLayout.LayoutParams(0, dp(44), 1); tabGap.leftMargin = dp(8);
+        tabs.addView(memoTab, tabGap);
+        requestTab.setOnClickListener(view -> { memoPage = false; render(); });
+        memoTab.setOnClickListener(view -> { memoPage = true; render(); });
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         actions.addView(row, margins(17, 0));
@@ -176,6 +197,32 @@ public final class MainActivity extends Activity {
         row.addView(alert, gap);
         LinearLayout.LayoutParams gap2 = new LinearLayout.LayoutParams(0, dp(43), 1); gap2.leftMargin = dp(6);
         row.addView(logout, gap2);
+        LinearLayout controls = new LinearLayout(this);
+        actions.addView(controls, margins(10, 0));
+        Button sort = button("정렬", NAVY);
+        Button filter = button(memoPage ? "새 메모" : "필터", memoPage ? CORAL : NAVY);
+        controls.addView(sort, new LinearLayout.LayoutParams(0, dp(42), 1));
+        LinearLayout.LayoutParams controlGap = new LinearLayout.LayoutParams(0, dp(42), 1); controlGap.leftMargin = dp(8);
+        controls.addView(filter, controlGap);
+        sort.setOnClickListener(view -> chooseSort());
+        filter.setOnClickListener(view -> { if (memoPage) editMemo(null, "", ""); else chooseFilter(); });
+        if (memoPage) {
+            EditText search = new EditText(this);
+            search.setSingleLine(true);
+            search.setTextSize(14);
+            search.setHint("이름 · 전화번호 · 메모 내용 검색");
+            search.setText(memoSearch);
+            search.setPadding(dp(14), dp(9), dp(14), dp(9));
+            search.setBackground(background(Color.WHITE, 12));
+            actions.addView(search, margins(10, 0));
+            search.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    memoSearch = s.toString(); renderMemos();
+                }
+                @Override public void afterTextChanged(Editable s) { }
+            });
+        }
         notice = label("", 13, MUTED, false);
         actions.addView(notice, margins(12, 0));
         TextView server = label("서버 주소: " + serverUrl(), 12, MUTED, false);
@@ -199,11 +246,16 @@ public final class MainActivity extends Activity {
 
     private void refresh() {
         if (list == null || session().isEmpty()) return;
-        notice.setText("신청 내용을 불러오는 중…");
+        notice.setText(memoPage ? "메모를 불러오는 중…" : "신청 내용을 불러오는 중…");
         io.execute(() -> {
             try {
-                JSONArray requests = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
-                runOnUiThread(() -> renderRequests(requests));
+                if (memoPage) {
+                    JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-memos", null, session()).getJSONArray("memos");
+                    runOnUiThread(() -> { memos = loaded; if (memoPage) renderMemos(); });
+                } else {
+                    JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
+                    runOnUiThread(() -> { requests = loaded; if (!memoPage) renderRequests(); });
+                }
             } catch (Exception error) {
                 runOnUiThread(() -> {
                     if (error instanceof ApiClient.ApiException && ((ApiClient.ApiException) error).status == 401) {
@@ -220,24 +272,32 @@ public final class MainActivity extends Activity {
         return format.format(new Date(epoch));
     }
 
-    private void renderRequests(JSONArray requests) {
+    private void renderRequests() {
         if (list == null) return;
         list.removeAllViews();
         int unread = 0;
         for (int i = 0; i < requests.length(); i++) if ("new".equals(requests.optJSONObject(i).optString("status"))) unread++;
         count.setText("수거 신청함  ·  새 신청 " + unread);
-        notice.setText("신청을 누르면 연락처와 수거 내용을 볼 수 있습니다.");
-        if (requests.length() == 0) {
-            TextView empty = label("아직 접수된 신청이 없습니다.", 16, MUTED, false);
-            empty.setGravity(Gravity.CENTER);
-            empty.setBackground(background(Color.WHITE, 18));
-            empty.setPadding(dp(18), dp(55), dp(18), dp(55));
-            list.addView(empty, margins(12, 0));
-            return;
-        }
+        ArrayList<JSONObject> visible = new ArrayList<>();
         for (int i = 0; i < requests.length(); i++) {
             JSONObject item = requests.optJSONObject(i);
             if (item == null) continue;
+            if (requestFilter == 1 && !"new".equals(item.optString("status"))) continue;
+            if (requestFilter == 2 && !"contacted".equals(item.optString("status"))) continue;
+            if (requestFilter == 3 && !"done".equals(item.optString("status"))) continue;
+            visible.add(item);
+        }
+        Collections.sort(visible, (a, b) -> {
+            if (requestSort == 2) {
+                int dates = a.optString("date").compareTo(b.optString("date"));
+                if (dates != 0) return dates;
+            }
+            return requestSort == 1 ? Long.compare(a.optLong("created_at"), b.optLong("created_at")) :
+                    Long.compare(b.optLong("created_at"), a.optLong("created_at"));
+        });
+        notice.setText("표시 " + visible.size() + "건 · 신청서를 누르면 상세 내용을 볼 수 있습니다.");
+        if (visible.isEmpty()) { emptyCard("해당하는 신청서가 없습니다."); return; }
+        for (JSONObject item : visible) {
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(18), dp(17), dp(18), dp(17));
@@ -248,6 +308,67 @@ public final class MainActivity extends Activity {
             card.addView(label(displayDate(item.optLong("created_at")) + "   ·   " + item.optString("amount") +
                     "   ·   " + item.optString("pickupMethod", "미기재"), 13, MUTED, false), margins(8, 0));
             card.setOnClickListener(view -> showDetail(item));
+            list.addView(card, margins(10, 0));
+        }
+    }
+
+    private void emptyCard(String message) {
+        TextView empty = label(message, 16, MUTED, false);
+        empty.setGravity(Gravity.CENTER);
+        empty.setBackground(background(Color.WHITE, 18));
+        empty.setPadding(dp(18), dp(55), dp(18), dp(55));
+        list.addView(empty, margins(12, 0));
+    }
+
+    private void chooseSort() {
+        String[] options = memoPage ? new String[]{"최근 수정순", "오래된 수정순", "이름순", "제목순"} :
+                new String[]{"최신 신청순", "오래된 신청순", "희망 날짜순"};
+        new AlertDialog.Builder(this).setTitle("정렬 기준").setSingleChoiceItems(options, memoPage ? memoSort : requestSort,
+                (dialog, which) -> { if (memoPage) { memoSort = which; renderMemos(); } else { requestSort = which; renderRequests(); } dialog.dismiss(); })
+                .setNegativeButton("취소", null).show();
+    }
+
+    private void chooseFilter() {
+        String[] options = {"전체", "새 신청", "연락 완료", "처리 완료"};
+        new AlertDialog.Builder(this).setTitle("신청서 필터").setSingleChoiceItems(options, requestFilter,
+                (dialog, which) -> { requestFilter = which; renderRequests(); dialog.dismiss(); })
+                .setNegativeButton("취소", null).show();
+    }
+
+    private void renderMemos() {
+        if (list == null || !memoPage) return;
+        list.removeAllViews();
+        ArrayList<JSONObject> visible = new ArrayList<>();
+        String query = memoSearch.trim().toLowerCase(Locale.KOREA);
+        String digits = query.replaceAll("\\D", "");
+        for (int i = 0; i < memos.length(); i++) {
+            JSONObject item = memos.optJSONObject(i);
+            if (item == null) continue;
+            String searchable = (item.optString("name") + " " + item.optString("title") + " " +
+                    item.optString("content") + " " + item.optString("phone")).toLowerCase(Locale.KOREA);
+            if (!query.isEmpty() && !searchable.contains(query) && (digits.isEmpty() || !item.optString("phone").contains(digits))) continue;
+            visible.add(item);
+        }
+        Collections.sort(visible, (a, b) -> {
+            if (memoSort == 2) return a.optString("name").compareTo(b.optString("name"));
+            if (memoSort == 3) return a.optString("title").compareTo(b.optString("title"));
+            return memoSort == 1 ? Long.compare(a.optLong("updated_at"), b.optLong("updated_at")) :
+                    Long.compare(b.optLong("updated_at"), a.optLong("updated_at"));
+        });
+        count.setText("고객 메모  ·  " + memos.length() + "건");
+        notice.setText("표시 " + visible.size() + "건 · 메모를 누르면 수정할 수 있습니다.");
+        if (visible.isEmpty()) { emptyCard("찾는 메모가 없습니다."); return; }
+        for (JSONObject item : visible) {
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(18), dp(17), dp(18), dp(17));
+            card.setBackground(background(Color.WHITE, 17));
+            card.addView(label(item.optString("title"), 18, NAVY, true));
+            card.addView(label(item.optString("name") + " · " + item.optString("phone") + " · " +
+                    displayDate(item.optLong("updated_at")), 12, MUTED, false), margins(5, 4));
+            String content = item.optString("content");
+            card.addView(label(content.length() > 90 ? content.substring(0, 90) + "…" : content, 14, NAVY, false));
+            card.setOnClickListener(view -> editMemo(item, "", ""));
             list.addView(card, margins(10, 0));
         }
     }
@@ -271,6 +392,12 @@ public final class MainActivity extends Activity {
         body.addView(contact, margins(0, 8));
         Button contacted = button("연락 완료로 표시", MUTED);
         body.addView(contacted, margins(0, 6));
+        Button done = button("처리 완료로 표시", NAVY);
+        body.addView(done, margins(0, 6));
+        Button addMemo = button("이 번호로 메모 작성", NAVY);
+        body.addView(addMemo, margins(0, 6));
+        Button delete = button("신청서 삭제", CORAL);
+        body.addView(delete, margins(0, 6));
         ScrollView detailScroll = new ScrollView(this);
         detailScroll.addView(body);
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle(name + " 님의 신청").setView(detailScroll)
@@ -288,15 +415,101 @@ public final class MainActivity extends Activity {
             try { startActivity(intent); }
             catch (ActivityNotFoundException error) { Toast.makeText(this, "연락처 앱을 찾지 못했습니다.", Toast.LENGTH_SHORT).show(); }
         });
-        contacted.setOnClickListener(view -> {
-            dialog.dismiss();
-            io.execute(() -> {
-                try {
-                    ApiClient.request(this, "POST", "/api/admin/native-requests",
-                            new JSONObject().put("id", item.optString("id")).put("status", "contacted"), session());
-                    runOnUiThread(this::refresh);
-                } catch (Exception error) { runOnUiThread(() -> Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show()); }
+        contacted.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "contacted"); });
+        done.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "done"); });
+        addMemo.setOnClickListener(view -> { dialog.dismiss(); editMemo(null, name, phone); });
+        delete.setOnClickListener(view -> new AlertDialog.Builder(this).setTitle("신청서 삭제")
+                .setMessage(name + " 님의 신청서를 삭제할까요? 삭제한 신청서는 복구할 수 없습니다.")
+                .setNegativeButton("취소", null)
+                .setPositiveButton("삭제", (d, which) -> {
+                    dialog.dismiss();
+                    io.execute(() -> {
+                        try {
+                            ApiClient.request(this, "DELETE", "/api/admin/native-requests",
+                                    new JSONObject().put("id", item.optString("id")), session());
+                            runOnUiThread(this::refresh);
+                        } catch (Exception error) { showError(error); }
+                    });
+                }).show());
+        dialog.show();
+    }
+
+    private void updateRequest(String id, String status) {
+        io.execute(() -> {
+            try {
+                ApiClient.request(this, "POST", "/api/admin/native-requests",
+                        new JSONObject().put("id", id).put("status", status), session());
+                runOnUiThread(this::refresh);
+            } catch (Exception error) { showError(error); }
+        });
+    }
+
+    private void showError(Exception error) {
+        runOnUiThread(() -> Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private EditText memoField(LinearLayout parent, String hint, String value, boolean multiline) {
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setText(value);
+        field.setTextSize(15);
+        field.setPadding(dp(13), dp(10), dp(13), dp(10));
+        field.setBackground(background(Color.WHITE, 10));
+        if (multiline) {
+            field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            field.setMinLines(4);
+            field.setGravity(Gravity.TOP);
+        } else field.setSingleLine(true);
+        parent.addView(field, margins(9, 0));
+        return field;
+    }
+
+    private void editMemo(JSONObject existing, String prefillName, String prefillPhone) {
+        LinearLayout fields = new LinearLayout(this);
+        fields.setOrientation(LinearLayout.VERTICAL);
+        fields.setPadding(dp(20), dp(8), dp(20), dp(12));
+        EditText name = memoField(fields, "고객 이름", existing == null ? prefillName : existing.optString("name"), false);
+        EditText phone = memoField(fields, "휴대폰 번호", existing == null ? prefillPhone : existing.optString("phone"), false);
+        phone.setInputType(InputType.TYPE_CLASS_PHONE);
+        EditText title = memoField(fields, "메모 제목", existing == null ? "" : existing.optString("title"), false);
+        EditText content = memoField(fields, "메모 내용", existing == null ? "" : existing.optString("content"), true);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(fields);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle(existing == null ? "새 메모" : "메모 수정")
+                .setView(scroll).setNegativeButton("취소", null).setPositiveButton("저장", null);
+        if (existing != null) builder.setNeutralButton("삭제", null);
+        AlertDialog dialog = builder.create();
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+                String n = name.getText().toString().trim();
+                String p = phone.getText().toString().replaceAll("\\D", "");
+                String t = title.getText().toString().trim();
+                String c = content.getText().toString().trim();
+                if (n.isEmpty() || !p.matches("01[016789]\\d{7,8}") || t.isEmpty() || c.isEmpty()) {
+                    Toast.makeText(this, "이름, 휴대폰 번호, 제목, 내용을 입력해 주세요.", Toast.LENGTH_LONG).show(); return;
+                }
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                io.execute(() -> {
+                    try {
+                        JSONObject data = new JSONObject().put("name", n).put("phone", p).put("title", t).put("content", c);
+                        if (existing != null) data.put("id", existing.optString("id"));
+                        ApiClient.request(this, "POST", "/api/admin/native-memos", data, session());
+                        runOnUiThread(() -> { dialog.dismiss(); memoPage = true; render(); });
+                    } catch (Exception error) {
+                        runOnUiThread(() -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true));
+                        showError(error);
+                    }
+                });
             });
+            if (existing != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(view ->
+                    new AlertDialog.Builder(this).setTitle("메모 삭제").setMessage("이 메모를 삭제할까요?")
+                            .setNegativeButton("취소", null).setPositiveButton("삭제", (d, which) -> io.execute(() -> {
+                                try {
+                                    ApiClient.request(this, "DELETE", "/api/admin/native-memos",
+                                            new JSONObject().put("id", existing.optString("id")), session());
+                                    runOnUiThread(() -> { dialog.dismiss(); refresh(); });
+                                } catch (Exception error) { showError(error); }
+                            })).show());
         });
         dialog.show();
     }

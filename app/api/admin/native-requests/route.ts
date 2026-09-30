@@ -1,4 +1,4 @@
-import { adminReady, listPickups, privateJson, setPickupStatus, validBearer } from '@/lib/admin';
+import { adminReady, deletePickup, listPickups, privateJson, setPickupStatus, validBearer } from '@/lib/admin';
 import { pickupDb, serverSettings } from '@/lib/admin-runtime';
 import { limitedJson } from '@/lib/pickup';
 
@@ -31,4 +31,18 @@ export async function POST(request: Request) {
     const updated = await setPickupStatus(auth.db!, data.id, data.status as 'new' | 'contacted' | 'done');
     return privateJson(updated ? { updated: true } : { message: '신청 내역을 찾지 못했습니다.' }, updated ? 200 : 404);
   } catch { return privateJson({ message: '상태를 저장하지 못했습니다.' }, 503); }
+}
+
+export async function DELETE(request: Request) {
+  const auth = await authorize(request);
+  if (auth.error) return auth.error;
+  let data: Record<string, unknown>;
+  try { data = await limitedJson(request); }
+  catch { return privateJson({ message: '입력 형식이 올바르지 않습니다.' }, 400); }
+  if (typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.id))
+    return privateJson({ message: '신청서를 확인해 주세요.' }, 400);
+  try {
+    const deleted = await deletePickup(auth.db!, data.id);
+    return privateJson(deleted ? { deleted: true } : { message: '신청 내역을 찾지 못했습니다.' }, deleted ? 200 : 404);
+  } catch { return privateJson({ message: '신청서를 삭제하지 못했습니다.' }, 503); }
 }

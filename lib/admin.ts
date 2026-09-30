@@ -14,6 +14,12 @@ export type PickupRecord = {
 
 export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'timeSlot' | 'pickupMethod' | 'message'>;
 
+export type CustomerMemo = {
+  id: string; phone: string; name: string; title: string; content: string;
+  created_at: number; updated_at: number;
+};
+export type MemoInput = Pick<CustomerMemo, 'phone' | 'name' | 'title' | 'content'>;
+
 export function adminReady(env: NodeJS.ProcessEnv, db?: D1Database): boolean {
   return !!db && !!env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 16 &&
     !!env.ADMIN_SESSION_SECRET && env.ADMIN_SESSION_SECRET.length >= 32;
@@ -25,13 +31,16 @@ export async function ensureTables(db: D1Database) {
     phone TEXT NOT NULL, address TEXT NOT NULL, amount TEXT NOT NULL,
     date TEXT NOT NULL, time_slot TEXT NOT NULL DEFAULT '미기재',
     pickup_method TEXT NOT NULL DEFAULT '미기재',
-    message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new'
+    message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
+    last_activity_at INTEGER NOT NULL DEFAULT 0
   )`).run();
   const columns = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
-  for (const column of ['time_slot', 'pickup_method']) {
+  for (const column of ['time_slot', 'pickup_method', 'last_activity_at']) {
     if (columns.results.some(item => item.name === column)) continue;
     try {
-      await db.prepare(`ALTER TABLE pickup_requests ADD COLUMN ${column} TEXT NOT NULL DEFAULT '미기재'`).run();
+      await db.prepare(column === 'last_activity_at'
+        ? 'ALTER TABLE pickup_requests ADD COLUMN last_activity_at INTEGER NOT NULL DEFAULT 0'
+        : `ALTER TABLE pickup_requests ADD COLUMN ${column} TEXT NOT NULL DEFAULT '미기재'`).run();
     } catch (error) {
       // Another request may have added the column first; verify before continuing.
       const current = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
@@ -44,16 +53,30 @@ export async function ensureTables(db: D1Database) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS admin_login_attempts (
     ip TEXT PRIMARY KEY, attempts INTEGER NOT NULL, reset_at INTEGER NOT NULL
   )`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS customer_memos (
+    id TEXT PRIMARY KEY, phone TEXT NOT NULL, name TEXT NOT NULL,
+    title TEXT NOT NULL, content TEXT NOT NULL,
+    created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+  )`).run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS customer_memos_phone ON customer_memos(phone)').run();
+  await db.prepare('UPDATE pickup_requests SET last_activity_at = created_at WHERE last_activity_at = 0').run();
+  const cutoffDate = new Date();
+  cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - 10);
+  const cutoff = cutoffDate.getTime();
+  await db.prepare(`DELETE FROM customer_memos WHERE updated_at < ? AND phone NOT IN
+    (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)`).bind(cutoff, cutoff).run();
+  await db.prepare(`DELETE FROM pickup_requests WHERE last_activity_at < ? AND phone NOT IN
+    (SELECT phone FROM customer_memos WHERE updated_at >= ?)`).bind(cutoff, cutoff).run();
 }
 
 export async function savePickup(db: D1Database, pickup: NewPickup) {
   await ensureTables(db);
   const id = crypto.randomUUID();
   await db.prepare(`INSERT INTO pickup_requests
-    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`)
+    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`)
     .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
-      pickup.timeSlot, pickup.pickupMethod, pickup.message).run();
+      pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now()).run();
   return id;
 }
 
@@ -61,13 +84,47 @@ export async function listPickups(db: D1Database) {
   await ensureTables(db);
   const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
     time_slot AS timeSlot, pickup_method AS pickupMethod, message, status
-    FROM pickup_requests ORDER BY created_at DESC LIMIT 200`).all<PickupRecord>();
+    FROM pickup_requests ORDER BY created_at DESC`).all<PickupRecord>();
   return result.results;
 }
 
 export async function setPickupStatus(db: D1Database, id: string, status: PickupRecord['status']) {
   await ensureTables(db);
-  const result = await db.prepare('UPDATE pickup_requests SET status = ? WHERE id = ?').bind(status, id).run();
+  const result = await db.prepare('UPDATE pickup_requests SET status = ?, last_activity_at = ? WHERE id = ?')
+    .bind(status, Date.now(), id).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function deletePickup(db: D1Database, id: string) {
+  await ensureTables(db);
+  const result = await db.prepare('DELETE FROM pickup_requests WHERE id = ?').bind(id).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function listMemos(db: D1Database) {
+  await ensureTables(db);
+  const result = await db.prepare(`SELECT id, phone, name, title, content, created_at, updated_at
+    FROM customer_memos ORDER BY updated_at DESC`).all<CustomerMemo>();
+  return result.results;
+}
+
+export async function saveMemo(db: D1Database, input: MemoInput, id?: string) {
+  await ensureTables(db);
+  const now = Date.now();
+  if (id) {
+    const result = await db.prepare(`UPDATE customer_memos SET phone = ?, name = ?, title = ?, content = ?, updated_at = ? WHERE id = ?`)
+      .bind(input.phone, input.name, input.title, input.content, now, id).run();
+    return (result.meta.changes ?? 0) > 0 ? id : null;
+  }
+  const newId = crypto.randomUUID();
+  await db.prepare(`INSERT INTO customer_memos (id, phone, name, title, content, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(newId, input.phone, input.name, input.title, input.content, now, now).run();
+  return newId;
+}
+
+export async function deleteMemo(db: D1Database, id: string) {
+  await ensureTables(db);
+  const result = await db.prepare('DELETE FROM customer_memos WHERE id = ?').bind(id).run();
   return (result.meta.changes ?? 0) > 0;
 }
 
