@@ -1,6 +1,8 @@
 type Environment = Record<string, string | undefined>;
-type Pickup = { name: string; phone: string; address: string; amount: string; date: string; message: string };
+type Pickup = { name: string; phone: string; address: string; amount: string; date: string; timeSlot: string; pickupMethod: string; message: string };
 const amounts = new Set(['20~30kg', '30kg 이상', '기타 품목 상담', '수거량 확인 필요']);
+const timeSlots = new Set(['오전', '오후', '시간 협의']);
+const pickupMethods = new Set(['대면 수거', '비대면 수거']);
 const unavailable = '현재 온라인 접수가 어렵습니다. 010-4880-8259로 전화해 주세요.';
 const uncertain = '문자 접수 결과를 확인하지 못했습니다. 중복 신청하지 마시고 010-4880-8259로 접수 여부를 확인해 주세요.';
 
@@ -22,7 +24,7 @@ function settings(env: Environment) {
 }
 
 export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
-  const limits = { name: 40, phone: 20, address: 150, amount: 15, date: 10, message: 350 };
+  const limits = { name: 40, phone: 20, address: 150, amount: 15, date: 10, timeSlot: 15, pickupMethod: 15, message: 350 };
   const fields: Record<string, string> = {};
   for (const [key, limit] of Object.entries(limits)) {
     const value = data[key];
@@ -31,7 +33,8 @@ export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | 
     if (key !== 'message' && (!fields[key] || /[\r\n]/.test(value))) return null;
   }
   fields.phone = fields.phone.replace(/[ -]/g, '');
-  if (!/^01[016789]\d{7,8}$/.test(fields.phone) || !amounts.has(fields.amount) || data.consent !== true) return null;
+  if (!/^01[016789]\d{7,8}$/.test(fields.phone) || !amounts.has(fields.amount) ||
+      !timeSlots.has(fields.timeSlot) || !pickupMethods.has(fields.pickupMethod) || data.consent !== true) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fields.date)) return null;
   const day = new Date(`${fields.date}T00:00:00Z`);
   const todayKst = new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
@@ -91,7 +94,7 @@ export async function submitPickup(request: Request, env: Environment, send: typ
     }
   } catch { return reply(503, { message: '자동 입력 방지 확인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' }); }
 
-  const text = `[헌옷일번지 수거 신청]\n성함: ${pickup.name}\n연락처: ${pickup.phone}\n주소: ${pickup.address}\n수거량: ${pickup.amount}\n희망일: ${pickup.date}\n문의: ${pickup.message || '없음'}\n※ 상담 후 방문 일정 확정`;
+  const text = `[헌옷일번지 수거 신청]\n성함: ${pickup.name}\n연락처: ${pickup.phone}\n주소: ${pickup.address}\n수거량: ${pickup.amount}\n희망일: ${pickup.date}\n희망 시간대: ${pickup.timeSlot}\n수거 방식: ${pickup.pickupMethod}\n문의: ${pickup.message || '없음'}\n※ 상담 후 방문 일정 확정`;
   if (new TextEncoder().encode(text).length > 2000) return reply(400, { message: '주소나 문의 내용을 조금 짧게 적어 주세요.' });
   const date = now.toISOString();
   const salt = crypto.randomUUID().replaceAll('-', '');

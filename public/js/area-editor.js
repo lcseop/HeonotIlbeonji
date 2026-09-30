@@ -2,7 +2,7 @@
   const $ = id => document.getElementById(id);
   const ns = 'http://www.w3.org/2000/svg';
   const storageKey = 'heonot-service-areas-draft-v1';
-  const bounds = { west: 126.51, east: 127.03, south: 37.35, north: 38.00 };
+  const bounds = { west: 126.54, east: 127.01, south: 37.50, north: 38.01 };
   const mapHost = $('editorMap');
   let published, data, selected = 0, selectedPoint = -1, addMode = false;
   let kakaoMap = null, overlays = [], markers = [], svg;
@@ -153,7 +153,13 @@
       published = await fetch('/data/service-areas.json', { cache: 'no-store' }).then(response => response.json());
       if (!valid(published)) throw new Error('invalid');
       data = copy(published);
-      try { const draft = JSON.parse(localStorage.getItem(storageKey)); if (valid(draft)) { data = draft; notice('이 브라우저에 저장된 임시 작업을 불러왔습니다.'); } } catch {}
+      try {
+        const draft = JSON.parse(localStorage.getItem(storageKey));
+        const sameAreas = valid(draft) && draft.areas.length === published.areas.length &&
+          draft.areas.every((area, index) => area.name === published.areas[index].name);
+        if (sameAreas) { data = draft; notice('이 브라우저에 저장된 임시 작업을 불러왔습니다.'); }
+        else if (valid(draft)) notice('게시 지역이 변경되어 이전 임시 작업은 불러오지 않았습니다.');
+      } catch {}
       render();
       const config = await fetch('/api/map-config', { cache: 'no-store' }).then(response => response.ok ? response.json() : {}).catch(() => ({}));
       if (config.key) loadKakao(config.key);

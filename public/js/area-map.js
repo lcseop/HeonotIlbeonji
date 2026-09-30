@@ -5,7 +5,7 @@
   if (!host || !chips || !status) return;
 
   const ns = 'http://www.w3.org/2000/svg';
-  const bounds = { west: 126.51, east: 127.03, south: 37.35, north: 38.00 };
+  const bounds = { west: 126.54, east: 127.01, south: 37.50, north: 38.01 };
   let areas = [];
   let renderers = [];
   let selected = '';

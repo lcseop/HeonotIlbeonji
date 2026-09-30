@@ -22,6 +22,7 @@
 
   function show(message, error = false) {
     notice.textContent = message;
+    notice.hidden = !message;
     notice.classList.toggle('error', error);
   }
   function resetChallenge() {
@@ -52,7 +53,7 @@
       });
       enabled = true;
       button.disabled = false;
-      show(config.delivery === 'dashboard' ? '신청 내용은 관리자 신청함으로 전달됩니다.' : '신청 내용은 담당자에게 문자로 전달됩니다.');
+      show('');
     } catch { show(fallback, true); }
   }
 
@@ -68,7 +69,7 @@
     }
     if (!token) { show('자동 입력 방지 확인을 완료한 뒤 신청해 주세요.', true); return; }
     const fields = new FormData(form);
-    const payload = Object.fromEntries(['name', 'phone', 'address', 'amount', 'date', 'message'].map(key => [key, fields.get(key)]));
+    const payload = Object.fromEntries(['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message'].map(key => [key, fields.get(key)]));
     payload.consent = form.elements.consent.checked;
     payload.token = token;
     pending = true;

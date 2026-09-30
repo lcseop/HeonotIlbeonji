@@ -123,21 +123,22 @@
         <li class="reveal"><span class="step">01</span><div class="process-symbol">✎</div><h3>간편 신청</h3><p>연락처와 주소, 예상 수거량을 남겨주세요.</p></li>
         <li class="reveal"><span class="step">02</span><div class="process-symbol">◷</div><h3>전화 안내</h3><p>신청을 확인하고 연락드려 방문 일정을 정합니다.</p></li>
         <li class="reveal"><span class="step">03</span><div class="process-symbol">⌂</div><h3>방문 수거</h3><p>약속한 시간에 방문해 안전하게 수거합니다.</p></li>
-        <li class="reveal"><span class="step">04</span><div class="process-symbol">✓</div><h3>현장 정산</h3><p>무게와 품목을 확인하고 현장에서 정산합니다.</p></li>
+        <li class="reveal"><span class="step">04</span><div class="process-symbol">✓</div><h3>수거 후 정산</h3><p>무게와 품목을 확인하고 수거 방식에 맞춰 정산합니다.</p></li>
       </ol>
     </div></section>
 
     <section class="section area-section" id="area"><div class="container area-grid">
       <div class="area-copy"><p class="section-label light">SERVICE AREA</p><h2>우리 동네도<br>수거할까요?</h2><p>지도에서 지역을 눌러 대략적인 수거 범위를 살펴보세요. 정확한 방문 가능 여부와 일정은 주소·수거량을 확인한 뒤 안내드립니다.</p><a href="#request" class="button cream">수거 문의하기 <span>→</span></a></div>
-      <div class="area-panel"><div class="area-map-head"><div><span class="area-map-kicker">PICKUP MAP</span><h3>방문수거 지역 안내</h3></div><span class="area-map-status" id="areaMapStatus">지도 준비 중</span></div><div class="area-map" id="areaMap" role="img" aria-label="일산, 고양, 김포, 파주, 운정, 인천, 서울 서구 수거 상담 지역 지도"></div><div class="districts" id="areaDistricts" aria-label="수거 상담 지역"></div><p class="area-map-note">표시된 도형은 상담용 예시 범위입니다. 실제 수거 여부는 주소와 품목 확인 후 결정됩니다.</p></div>
+      <div class="area-panel"><div class="area-map-head"><div><span class="area-map-kicker">PICKUP MAP</span><h3>방문수거 지역 안내</h3></div><span class="area-map-status" id="areaMapStatus">지도 준비 중</span></div><div class="area-map" id="areaMap" role="img" aria-label="일산, 고양, 김포, 파주, 운정, 서울 강서구 수거 상담 지역 지도"></div><div class="districts" id="areaDistricts" aria-label="수거 상담 지역"></div><p class="area-map-note">표시된 도형은 상담용 예시 범위입니다. 실제 수거 여부는 주소와 품목 확인 후 결정됩니다.</p></div>
     </div></section>
 
     <section class="section request-section" id="request"><div class="container request-grid">
-      <div class="request-copy"><p class="section-label">PICKUP REQUEST</p><h2>수거 신청을<br>남겨주세요.</h2><p>내용을 확인한 뒤 직접 연락드려 방문 일정을 정합니다.<br>비대면 문 앞 수거는 운영하지 않습니다.</p><div class="contact-box"><small>전화 상담</small><strong><a href="tel:01048808259">010-4880-8259</a></strong><span>월–토 주간 운영 · 일요일 및 야간 제외</span></div></div>
+      <div class="request-copy"><p class="section-label">PICKUP REQUEST</p><h2>수거 신청을<br>남겨주세요.</h2><p>내용을 확인한 뒤 직접 연락드려 방문 일정을 정합니다.<br>대면·비대면 중 편한 방식을 선택해 주세요.</p><div class="contact-box"><small>전화 상담</small><strong><a href="tel:01048808259">010-4880-8259</a></strong><span>월–토 주간 운영 · 일요일 및 야간 제외</span></div></div>
       <form class="request-form" id="pickupForm">
         <div class="form-row"><label>성함<input type="text" name="name" maxlength="40" autocomplete="name" placeholder="홍길동" required></label><label>연락처<input type="tel" name="phone" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" required></label></div>
         <label>수거 주소<input type="text" name="address" maxlength="150" autocomplete="street-address" placeholder="예: ○○지역 ○○마을 ○○동 ○○호" required></label>
         <div class="form-row"><label>예상 수거량<select name="amount" required><option value="">선택해 주세요</option><option>20~30kg</option><option>30kg 이상</option><option>기타 품목 상담</option><option>수거량 확인 필요</option></select></label><label>희망 날짜<input type="date" name="date" required></label></div>
+        <div class="form-row"><label>희망 시간대<select name="timeSlot" required><option value="">선택해 주세요</option><option>오전</option><option>오후</option><option>시간 협의</option></select></label><label>수거 방식<select name="pickupMethod" required><option value="">선택해 주세요</option><option>대면 수거</option><option>비대면 수거</option></select></label></div>
         <p class="pickup-form-guide">헌옷은 20kg 이상부터 수거합니다. 다른 물품은 ‘기타 품목 상담’을 선택하고, 품목·수량·연식 등을 아래에 적어 주세요. 엘리베이터 없는 주택 2층 이상은 사전 상담이 필요합니다. <a href="#pickup-guide">수거 기준 확인</a></p>
         <label>문의 내용<textarea name="message" rows="3" maxlength="350" placeholder="예: 헌옷 25kg, 책 3묶음 / 주택 2층, 엘리베이터 없음"></textarea></label>
         <label class="check-label"><input type="checkbox" name="consent" required><span>개인정보 수집 및 이용에 동의합니다. <button type="button" id="privacyButton">내용보기</button></span></label>
@@ -152,7 +153,7 @@
         <article class="faq-item open"><button type="button" aria-expanded="true"><span><b>01</b> 최소 수거량이 있나요?</span><i>−</i></button><div class="faq-answer"><p>헌옷은 가능하면 20kg 이상부터 수거 가능합니다. 다만, 추가 품목이 있다면 문의 후 수거 가능합니다. 신발·가방·헌책·가전 등 다른 품목은 종류와 수량을 알려주시면 수거 조건을 안내해 드립니다.</p></div></article>
         <article class="faq-item"><button type="button" aria-expanded="false"><span><b>02</b> 어떤 옷이든 수거 가능한가요?</span><i>+</i></button><div class="faq-answer"><p>각종 옷가지와 장갑, 모자, 스카프, 속옷, 양말 등을 수거합니다. 단체복·유니폼은 문의 바랍니다. <a href="#pickup-guide">품목별 수거 기준</a>을 확인해 주세요.</p></div></article>
         <article class="faq-item"><button type="button" aria-expanded="false"><span><b>03</b> 집에 없어도 수거할 수 있나요?</span><i>+</i></button><div class="faq-answer"><p>비대면 수거 적극 환영합니다. 비대면 수거 시에는 정산 시 계좌 입금됩니다.</p></div></article>
-        <article class="faq-item"><button type="button" aria-expanded="false"><span><b>04</b> 수거 금액은 어떻게 정해지나요?</span><i>+</i></button><div class="faq-answer"><p>품목별 가격과 정산 방식은 전화 상담 시 안내드립니다. 방문 후 실제 무게와 품목을 확인하고 현장에서 정산합니다.</p></div></article>
+        <article class="faq-item"><button type="button" aria-expanded="false"><span><b>04</b> 수거 금액은 어떻게 정해지나요?</span><i>+</i></button><div class="faq-answer"><p>품목별 가격과 정산 방식은 전화 상담 시 안내드립니다. 방문 후 실제 무게와 품목을 확인하고, 비대면 수거는 계좌로 정산합니다.</p></div></article>
         <article class="faq-item"><button type="button" aria-expanded="false"><span><b>05</b> 직접 사업장으로 가져가고 싶은데 어떻게 해야하나요?</span><i>+</i></button><div class="faq-answer"><p>미리 연락 주시면 가능합니다. 주소는 경기도 고촌읍 전호로56번길 30, 1층 (우측) 입니다.</p></div></article>
       </div>
     </div></section>
@@ -162,6 +163,6 @@
 
   <nav class="mobile-contact" aria-label="빠른 상담"><a href="tel:01048808259">전화 상담</a><a href="#request">수거 신청하기</a></nav>
 
-  <div class="modal" id="privacyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-card"><button class="modal-close" type="button" aria-label="닫기">×</button><p class="section-label">PRIVACY</p><h2 id="modalTitle">개인정보 수집 안내</h2><p>수거 상담과 방문 일정 조율을 위해 성함, 연락처, 수거 주소, 예상 수거량, 희망 날짜와 문의 내용을 수집합니다. 신청 내용은 관리자 전용 신청함에 저장되어 담당자가 확인합니다. 자동 입력 방지를 위해 Cloudflare Turnstile을 사용합니다. 동의를 거부하실 수 있으나, 이 경우 온라인 신청은 이용하실 수 없습니다. 개인정보 관련 문의는 010-4880-8259로 연락해 주세요.</p><button class="button primary modal-confirm" type="button">확인</button></div></div>
+  <div class="modal" id="privacyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-card"><button class="modal-close" type="button" aria-label="닫기">×</button><p class="section-label">PRIVACY</p><h2 id="modalTitle">개인정보 수집 안내</h2><p>수거 상담과 방문 일정 조율을 위해 성함, 연락처, 수거 주소, 예상 수거량, 희망 날짜·시간대, 수거 방식과 문의 내용을 수집합니다. 신청 내용은 관리자 전용 신청함에 저장되어 담당자가 확인합니다. 자동 입력 방지를 위해 Cloudflare Turnstile을 사용합니다. 동의를 거부하실 수 있으나, 이 경우 온라인 신청은 이용하실 수 없습니다. 개인정보 관련 문의는 010-4880-8259로 연락해 주세요.</p><button class="button primary modal-confirm" type="button">확인</button></div></div>
 </body>
 </html>

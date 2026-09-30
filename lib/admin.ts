@@ -6,11 +6,13 @@ export type PickupRecord = {
   address: string;
   amount: string;
   date: string;
+  timeSlot: string;
+  pickupMethod: string;
   message: string;
   status: 'new' | 'contacted' | 'done';
 };
 
-export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'message'>;
+export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'timeSlot' | 'pickupMethod' | 'message'>;
 
 export function adminReady(env: NodeJS.ProcessEnv, db?: D1Database): boolean {
   return !!db && !!env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 16 &&
@@ -21,8 +23,21 @@ export async function ensureTables(db: D1Database) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS pickup_requests (
     id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, name TEXT NOT NULL,
     phone TEXT NOT NULL, address TEXT NOT NULL, amount TEXT NOT NULL,
-    date TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new'
+    date TEXT NOT NULL, time_slot TEXT NOT NULL DEFAULT '미기재',
+    pickup_method TEXT NOT NULL DEFAULT '미기재',
+    message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new'
   )`).run();
+  const columns = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
+  for (const column of ['time_slot', 'pickup_method']) {
+    if (columns.results.some(item => item.name === column)) continue;
+    try {
+      await db.prepare(`ALTER TABLE pickup_requests ADD COLUMN ${column} TEXT NOT NULL DEFAULT '미기재'`).run();
+    } catch (error) {
+      // Another request may have added the column first; verify before continuing.
+      const current = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
+      if (!current.results.some(item => item.name === column)) throw error;
+    }
+  }
   await db.prepare(`CREATE TABLE IF NOT EXISTS admin_devices (
     token TEXT PRIMARY KEY, created_at INTEGER NOT NULL
   )`).run();
@@ -35,15 +50,17 @@ export async function savePickup(db: D1Database, pickup: NewPickup) {
   await ensureTables(db);
   const id = crypto.randomUUID();
   await db.prepare(`INSERT INTO pickup_requests
-    (id, created_at, name, phone, address, amount, date, message, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')`)
-    .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date, pickup.message).run();
+    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`)
+    .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
+      pickup.timeSlot, pickup.pickupMethod, pickup.message).run();
   return id;
 }
 
 export async function listPickups(db: D1Database) {
   await ensureTables(db);
-  const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date, message, status
+  const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
+    time_slot AS timeSlot, pickup_method AS pickupMethod, message, status
     FROM pickup_requests ORDER BY created_at DESC LIMIT 200`).all<PickupRecord>();
   return result.results;
 }

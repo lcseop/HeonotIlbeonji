@@ -245,7 +245,8 @@ public final class MainActivity extends Activity {
             String state = item.optString("status");
             String stateText = "new".equals(state) ? "새 신청" : "contacted".equals(state) ? "연락 완료" : "처리 완료";
             card.addView(label(item.optString("name") + " 님   ·   " + stateText, 18, NAVY, true));
-            card.addView(label(displayDate(item.optLong("created_at")) + "   ·   " + item.optString("amount"), 13, MUTED, false), margins(8, 0));
+            card.addView(label(displayDate(item.optLong("created_at")) + "   ·   " + item.optString("amount") +
+                    "   ·   " + item.optString("pickupMethod", "미기재"), 13, MUTED, false), margins(8, 0));
             card.setOnClickListener(view -> showDetail(item));
             list.addView(card, margins(10, 0));
         }
@@ -261,6 +262,8 @@ public final class MainActivity extends Activity {
         detailLine(body, "수거 주소", item.optString("address"));
         detailLine(body, "예상 수거량", item.optString("amount"));
         detailLine(body, "희망 날짜", item.optString("date"));
+        detailLine(body, "희망 시간대", item.optString("timeSlot", "미기재"));
+        detailLine(body, "수거 방식", item.optString("pickupMethod", "미기재"));
         detailLine(body, "문의 내용", item.optString("message", "없음"));
         Button dial = button("전화 앱에서 번호 열기", CORAL);
         body.addView(dial, margins(20, 8));

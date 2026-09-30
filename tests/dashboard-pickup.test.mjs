@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dashboardConfiguration, submitDashboardPickup } from '../lib/dashboard-pickup.ts';
-import { makeSession, validAdminToken } from '../lib/admin.ts';
+import { ensureTables, makeSession, validAdminToken } from '../lib/admin.ts';
 import { notifyAdmins } from '../lib/admin.ts';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 
@@ -11,7 +11,7 @@ const env = {
   PICKUP_DELIVERY_MODE: 'dashboard',
 };
 const now = new Date('2026-09-29T15:30:00Z');
-const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', message: '테스트', consent: true, token: 'test-token' };
+const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', timeSlot: '오후', pickupMethod: '비대면 수거', message: '테스트', consent: true, token: 'test-token' };
 function request(data = payload, origin = env.SITE_ORIGIN) {
   return new Request(`${env.SITE_ORIGIN}/api/pickup`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
 }
@@ -28,6 +28,7 @@ function database() {
           } };
         },
         run: async () => ({ meta: { changes: 0 } }),
+        all: async () => ({ results: [] }),
       };
     },
   };
@@ -37,6 +38,23 @@ test('dashboard mode enables the form without Solapi credentials', async () => {
   const db = database();
   assert.deepEqual(await dashboardConfiguration(env, db).json(), { enabled: true, siteKey: 'test-site', delivery: 'dashboard' });
   assert.equal((await dashboardConfiguration(env).json()).enabled, false);
+});
+
+test('existing pickup records gain the new columns without clearing old rows', async () => {
+  const columns = new Set(['id', 'created_at', 'name', 'phone', 'address', 'amount', 'date', 'message', 'status']);
+  const changed = [];
+  const db = { prepare(sql) { return {
+    all: async () => ({ results: [...columns].map(name => ({ name })) }),
+    run: async () => {
+      const match = sql.match(/^ALTER TABLE pickup_requests ADD COLUMN (\w+)/);
+      if (match) { columns.add(match[1]); changed.push(match[1]); }
+      return { meta: { changes: 0 } };
+    },
+  }; } };
+  await ensureTables(db);
+  await ensureTables(db);
+  assert.deepEqual(changed, ['time_slot', 'pickup_method']);
+  assert.ok(columns.has('id'));
 });
 
 test('verified request is saved once without calling Solapi', async () => {
@@ -52,6 +70,8 @@ test('verified request is saved once without calling Solapi', async () => {
   assert.equal((await response.json()).accepted, true);
   assert.equal(db.inserted.length, 1);
   assert.equal(db.inserted[0][3], '01012345678');
+  assert.equal(db.inserted[0][7], '오후');
+  assert.equal(db.inserted[0][8], '비대면 수거');
   assert.equal(urls.length, 1);
 });
 
@@ -59,6 +79,14 @@ test('invalid origin or challenge never stores an application', async () => {
   const db = database();
   assert.equal((await submitDashboardPickup(request(payload, 'https://other.example'), env, db, () => assert.fail('must not call'), now)).status, 403);
   assert.equal((await submitDashboardPickup(request(), env, db, async () => Response.json({ success: false }), now)).status, 400);
+  assert.equal(db.inserted.length, 0);
+});
+
+test('time slot and pickup method must be selected from the offered choices', async () => {
+  const db = database();
+  const verify = async () => Response.json({ success: true, hostname: 'pickup.example', action: 'pickup-request' });
+  assert.equal((await submitDashboardPickup(request({ ...payload, timeSlot: '' }), env, db, verify, now)).status, 400);
+  assert.equal((await submitDashboardPickup(request({ ...payload, pickupMethod: '우편' }), env, db, verify, now)).status, 400);
   assert.equal(db.inserted.length, 0);
 });
 
