@@ -2,7 +2,7 @@
     <style name="Theme.HeonotAdmin" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#E95448</item>
-        <item name="android:statusBarColor">#18334E</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">#18334E</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>

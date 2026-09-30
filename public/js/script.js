@@ -2,6 +2,29 @@ const revealElements = document.querySelectorAll('.reveal');
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const pickupRoute = document.querySelector('.pickup-route');
 
+// Keep the public address tidy while retaining the static page's asset base.
+const firstSection = window.location.hash;
+if (window.location.pathname === '/html/index.html' || window.location.pathname === '/html/') {
+  window.history.replaceState(null, '', '/');
+}
+if (firstSection) {
+  const target = document.getElementById(decodeURIComponent(firstSection.slice(1)));
+  if (target) requestAnimationFrame(() => target.scrollIntoView());
+}
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', event => {
+    const target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: motionPreference.matches ? 'auto' : 'smooth' });
+    if (link.classList.contains('skip-link')) {
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    }
+    if (window.location.pathname !== '/') window.history.replaceState(null, '', '/');
+  });
+});
+
 // Content stays visible without JavaScript or when reduced motion is requested.
 if ('IntersectionObserver' in window && !motionPreference.matches) {
   document.querySelectorAll('.item-grid, .gallery-grid, .process-list, .hero-grid').forEach((group) => {
