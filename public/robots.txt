@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /html/area-editor.html
+
+Sitemap: https://1beonji.com/sitemap.xml
