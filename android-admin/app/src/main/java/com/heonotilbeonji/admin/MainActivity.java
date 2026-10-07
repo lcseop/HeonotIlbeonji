@@ -81,6 +81,7 @@ public final class MainActivity extends Activity {
     private int memoSort = 0;
     private String memoSearch = "";
     private String selectedRequestId = "";
+    private AppUpdater updater;
 
     private static final int GREEN = Color.rgb(28, 125, 87);
     private static final int BLUE = Color.rgb(52, 111, 174);
@@ -126,6 +127,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        updater = new AppUpdater(this);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(NAVY);
@@ -160,12 +162,14 @@ public final class MainActivity extends Activity {
 
     @Override public void onResume() {
         super.onResume();
+        if (updater != null) updater.resume(!session().isEmpty());
         if (list != null && !session().isEmpty()) refresh();
     }
 
     @Override public void onDestroy() {
         if (requestEditor != null && requestEditor.dialog.isShowing()) requestEditor.dialog.dismiss();
         super.onDestroy();
+        if (updater != null) updater.close();
         io.shutdownNow();
     }
 
@@ -272,7 +276,7 @@ public final class MainActivity extends Activity {
                 try {
                     JSONObject input = new JSONObject().put("password", entered);
                     String token = ApiClient.request(this, "POST", "/api/admin/native-login", input, null).getString("token");
-                    runOnUiThread(() -> { saveSession(token); password.setText(""); render(); registerDevice(); });
+                    runOnUiThread(() -> { saveSession(token); password.setText(""); render(); registerDevice(); updater.resume(true); });
                 } catch (Exception error) {
                     runOnUiThread(() -> { login.setEnabled(true); notice.setText(error.getMessage()); });
                 }
@@ -350,10 +354,11 @@ public final class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        String[] choices = {"알림 설정", "서버 주소 설정", "로그아웃"};
+        String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃"};
         new AlertDialog.Builder(this).setTitle("관리자 설정").setItems(choices, (dialog, which) -> {
             if (which == 0) requestAlerts();
             else if (which == 1) editServerUrl();
+            else if (which == 2) updater.check(true);
             else {
                 unregisterDevice();
                 saveSession("");
