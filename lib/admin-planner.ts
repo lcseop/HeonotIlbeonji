@@ -7,6 +7,22 @@ export function validPlannerDate(value: unknown): value is string {
     value >= '2000-01-01' && value <= '2100-12-31';
 }
 
+export function parseAdminDetails(data: Record<string, unknown>) {
+  if (typeof data.reservedTime !== 'string' || typeof data.adminNote !== 'string' ||
+    (data.reservedTime !== '' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.reservedTime)) ||
+    data.adminNote.length > 2000 || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(data.adminNote)) return null;
+  return { reservedTime: data.reservedTime, adminNote: data.adminNote.trim() };
+}
+
+export async function saveAdminDetails(db: D1Database, id: string, details: { reservedTime: string; adminNote: string }) {
+  await ensureTables(db);
+  const now = Date.now();
+  const result = await db.prepare(`UPDATE pickup_requests SET reserved_time = ?, admin_note = ?,
+    admin_note_updated_at = ?, last_activity_at = ? WHERE id = ?`)
+    .bind(details.reservedTime, details.adminNote, now, now, id).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
 // Phone consultations may be logged before an address or visit date is agreed.
 export function parseManualPickup(data: Record<string, unknown>): NewPickup | null {
   const limits = { name: 40, phone: 30, address: 150, amount: 40, date: 10, timeSlot: 15, pickupMethod: 15, message: 350 };

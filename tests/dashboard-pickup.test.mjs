@@ -54,7 +54,7 @@ test('existing pickup records gain the new columns without clearing old rows', a
   }; } };
   await ensureTables(db);
   await ensureTables(db);
-  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at']);
+  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at']);
   assert.ok(columns.has('id'));
 });
 

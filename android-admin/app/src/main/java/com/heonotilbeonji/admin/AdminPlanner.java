@@ -98,7 +98,8 @@ final class AdminPlanner {
             for (int i = 0; i < 7; i++) {
                 int number = week * 7 + i - offset + 1;
                 LinearLayout cell = column(a); cell.setGravity(Gravity.CENTER); cell.setPadding(0, dp(a, 4), 0, dp(a, 4));
-                LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(a, 58), 1);
+                float scale = a.getResources().getConfiguration().fontScale;
+                LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(a, Math.max(68, (int) (42 * scale + 16))), 1);
                 p.setMargins(dp(a, 1), dp(a, 1), dp(a, 1), dp(a, 1)); row.addView(cell, p);
                 if (number < 1 || number > days) continue;
                 day.set(Calendar.DAY_OF_MONTH, number); String date = iso(day);
@@ -115,16 +116,19 @@ final class AdminPlanner {
                 GradientDrawable background = bg(a, active ? NAVY : date.equals(today) ? SURFACE : Color.WHITE, 10);
                 if (date.equals(today)) background.setStroke(dp(a, 1), BLUE);
                 cell.setBackground(background);
-                cell.addView(text(a, String.valueOf(number), 15, active ? Color.WHITE : i == 0 ? CORAL : NAVY, true));
+                TextView dayNumber = text(a, String.valueOf(number), 15, active ? Color.WHITE : i == 0 ? CORAL : NAVY, true);
+                dayNumber.setGravity(Gravity.CENTER); dayNumber.setIncludeFontPadding(false);
+                cell.addView(dayNumber, new LinearLayout.LayoutParams(-1, -2));
                 TextView badge = text(a, count > 0 ? count + "건" : hasMemo ? "메모" : "", 10, active ? Color.WHITE : BLUE, true);
-                badge.setSingleLine(true); cell.addView(badge);
+                badge.setGravity(Gravity.CENTER); badge.setIncludeFontPadding(false); badge.setSingleLine(true);
+                badge.setMinHeight(dp(a, 20));
+                LinearLayout.LayoutParams badgeSpace = new LinearLayout.LayoutParams(-1, -2);
+                badgeSpace.topMargin = dp(a, 5); cell.addView(badge, badgeSpace);
                 cell.setContentDescription(RequestSummary.date(date) + ", 신청 " + count + "건" + (hasMemo ? ", 메모 있음" : ""));
                 cell.setFocusable(true); cell.setOnClickListener(v -> select.accept(date));
             }
             panel.addView(row);
         }
-        TextView hint = text(a, "희망 날짜 기준 · 건수는 현재 필터를 따릅니다", 11, MUTED, false);
-        hint.setGravity(Gravity.CENTER); panel.addView(hint, space(a, 8));
         return panel;
     }
     static boolean matchesFilter(JSONObject item, int filter) {

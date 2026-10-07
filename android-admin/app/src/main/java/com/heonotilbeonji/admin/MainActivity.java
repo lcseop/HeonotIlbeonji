@@ -80,7 +80,6 @@ public final class MainActivity extends Activity {
     private int requestSort = 0;
     private int memoSort = 0;
     private String memoSearch = "";
-    private String selectedMemoPhone = "";
     private String selectedRequestId = "";
 
     private static final int GREEN = Color.rgb(28, 125, 87);
@@ -287,7 +286,7 @@ public final class MainActivity extends Activity {
         actions.setPadding(dp(16), dp(10), dp(16), dp(8));
         actions.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(actions);
-        count = label(memoPage ? "고객 메모" : calendarPage ? "수거 달력" : "수거 신청함", 23, NAVY, true);
+        count = label(memoPage ? "신청서 메모" : calendarPage ? "수거 달력" : "수거 신청함", 23, NAVY, true);
         actions.addView(count);
         LinearLayout tabs = new LinearLayout(this);
         actions.addView(tabs, margins(8, 0));
@@ -301,7 +300,7 @@ public final class MainActivity extends Activity {
         tabs.addView(memoTab, tabGap);
         requestTab.setOnClickListener(view -> { memoPage = false; calendarPage = false; render(); });
         calendarTab.setOnClickListener(view -> { memoPage = false; calendarPage = true; selectedRequestId = ""; render(); });
-        memoTab.setOnClickListener(view -> { memoPage = true; calendarPage = false; selectedMemoPhone = ""; render(); });
+        memoTab.setOnClickListener(view -> { memoPage = true; calendarPage = false; render(); });
         if (!memoPage) {
             Button add = AdminPlanner.button(this, "신청서 직접 작성", Color.WHITE, CORAL, R.drawable.ic_material_note_add);
             actions.addView(add, margins(8, 0)); add.setOnClickListener(view -> newRequest());
@@ -317,7 +316,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams refreshGap = new LinearLayout.LayoutParams(0, dp(39), 1); refreshGap.leftMargin = dp(6);
         controls.addView(refresh, refreshGap);
         sort.setOnClickListener(view -> chooseSort());
-        filter.setOnClickListener(view -> { if (memoPage) editMemo(null, customerName(selectedMemoPhone), selectedMemoPhone); else chooseFilter(); });
+        filter.setOnClickListener(view -> { if (memoPage) chooseRequestNote(); else chooseFilter(); });
         if (memoPage) {
             EditText search = new EditText(this);
             search.setSingleLine(true);
@@ -330,7 +329,7 @@ public final class MainActivity extends Activity {
             search.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    memoSearch = s.toString(); selectedMemoPhone = ""; renderMemos();
+                    memoSearch = s.toString(); renderMemos();
                 }
                 @Override public void afterTextChanged(Editable s) { }
             });
@@ -344,6 +343,7 @@ public final class MainActivity extends Activity {
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(dp(16), 0, dp(16), dp(22));
         scroll.addView(list);
+        CollapsingActions.attach(scroll, actions);
         refresh.setOnClickListener(view -> refresh());
         if (memoPage) renderMemos(); else renderRequests();
         refresh();
@@ -430,9 +430,9 @@ public final class MainActivity extends Activity {
             LinearLayout dayHeader = new LinearLayout(this); dayHeader.setGravity(Gravity.CENTER_VERTICAL);
             TextView dayTitle = label(RequestSummary.date(selectedDay) + " · " + visible.size() + "건", 16, NAVY, true);
             dayHeader.addView(dayTitle, new LinearLayout.LayoutParams(0, -2, 1));
-            Button today = AdminPlanner.button(this, "오늘", BLUE, Color.WHITE, 0);
+            ImageView today = AdminPlanner.iconButton(this, R.drawable.ic_material_today, "오늘로 이동");
             today.setOnClickListener(v -> { calendarMonth = AdminPlanner.calendar(); selectedDay = AdminPlanner.iso(calendarMonth); renderRequests(); });
-            dayHeader.addView(today, new LinearLayout.LayoutParams(dp(58), dp(48)));
+            dayHeader.addView(today, new LinearLayout.LayoutParams(dp(48), dp(48)));
             list.addView(dayHeader, margins(12, 4));
         }
         if (visible.isEmpty()) emptyCard("해당하는 신청서가 없습니다.");
@@ -462,7 +462,10 @@ public final class MainActivity extends Activity {
             name.setSingleLine(true);
             name.setEllipsize(TextUtils.TruncateAt.END);
             text.addView(name);
-            text.addView(label("희망 " + RequestSummary.date(item.optString("date")), 13, MUTED, false), margins(3, 0));
+            text.addView(label(calendarPage ? RequestNotes.calendarTime(item) : "희망 " + RequestSummary.date(item.optString("date")),
+                    calendarPage ? 15 : 13, calendarPage ? BLUE : MUTED, calendarPage), margins(3, 0));
+            if (calendarPage && item.optString("reservedTime").isEmpty())
+                text.addView(label("예약 시간 등록 안됨", 11, MUTED, false), margins(2, 0));
             row.addView(text, textParams);
             ImageView arrow = icon(R.drawable.ic_material_expand_more, MUTED, expanded ? "요약 접기" : null);
             arrow.setRotation(expanded ? 180 : 0);
@@ -595,7 +598,7 @@ public final class MainActivity extends Activity {
     }
 
     private void chooseSort() {
-        String[] options = memoPage ? new String[]{"최근 기록순", "오래된 기록순", "이름순", "제목순"} :
+        String[] options = memoPage ? new String[]{"최근 기록순", "오래된 기록순", "이름순", "희망 날짜순"} :
                 new String[]{"최신 신청순", "오래된 신청순", "희망 날짜순"};
         new AlertDialog.Builder(this).setTitle("정렬 기준").setSingleChoiceItems(options, memoPage ? memoSort : requestSort,
                 (dialog, which) -> { if (memoPage) { memoSort = which; renderMemos(); } else { requestSort = which; renderRequests(); } dialog.dismiss(); })
@@ -609,119 +612,73 @@ public final class MainActivity extends Activity {
                 .setNegativeButton("취소", null).show();
     }
 
-    private String customerName(String phone) {
-        if (phone.isEmpty()) return "";
-        String name = "고객";
-        long latest = -1;
-        for (int i = 0; i < requests.length(); i++) {
-            JSONObject item = requests.optJSONObject(i);
-            if (item != null && phone.equals(item.optString("phone")) && item.optLong("created_at") > latest) {
-                latest = item.optLong("created_at"); name = item.optString("name", "고객");
-            }
+    private void chooseRequestNote() {
+        if (requests.length() == 0) { Toast.makeText(this, "신청서를 먼저 등록해 주세요.", Toast.LENGTH_LONG).show(); return; }
+        ArrayList<JSONObject> choices = new ArrayList<>();
+        for (int i = 0; i < requests.length(); i++) if (requests.optJSONObject(i) != null) choices.add(requests.optJSONObject(i));
+        String[] names = new String[choices.size()];
+        for (int i = 0; i < choices.size(); i++) {
+            JSONObject item = choices.get(i);
+            names[i] = item.optString("name") + " · " + RequestSummary.date(item.optString("date")) + " · " + item.optString("phone");
         }
-        for (int i = 0; i < memos.length(); i++) {
-            JSONObject item = memos.optJSONObject(i);
-            if (item != null && phone.equals(item.optString("phone")) && item.optLong("updated_at") > latest) {
-                latest = item.optLong("updated_at"); name = item.optString("name", "고객");
-            }
-        }
-        return name;
+        new AlertDialog.Builder(this).setTitle("메모를 남길 신청서").setItems(names,
+                (d, which) -> editRequestNote(choices.get(which))).setNegativeButton("취소", null).show();
+    }
+
+    private void editRequestNote(JSONObject item) {
+        RequestNotes.edit(this, item, (data, result) -> io.execute(() -> {
+            try {
+                ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
+                runOnUiThread(() -> { result.accept(null); refresh(); });
+            } catch (Exception error) { result.accept(error.getMessage()); }
+        }));
     }
 
     private void renderMemos() {
         if (list == null || !memoPage) return;
         list.removeAllViews();
-        if (!selectedMemoPhone.isEmpty()) { renderCustomerMemos(); return; }
-        Map<String, Long> latest = new HashMap<>();
-        Map<String, Long> nameTimes = new HashMap<>();
-        Map<String, String> names = new HashMap<>();
-        Map<String, Integer> memoCounts = new HashMap<>();
-        Map<String, String> titles = new HashMap<>();
-        Set<String> matches = new HashSet<>();
         String query = memoSearch.trim().toLowerCase(Locale.KOREA);
-        String digits = query.replaceAll("\\D", "");
+        ArrayList<JSONObject> notes = new ArrayList<>();
         for (int i = 0; i < requests.length(); i++) {
             JSONObject item = requests.optJSONObject(i);
-            if (item == null) continue;
-            String phone = item.optString("phone");
-            if (phone.isEmpty()) continue;
-            long created = item.optLong("created_at");
-            latest.put(phone, Math.max(latest.getOrDefault(phone, 0L), created));
-            if (created >= nameTimes.getOrDefault(phone, -1L)) {
-                nameTimes.put(phone, created); names.put(phone, item.optString("name", "고객"));
-            }
-            if (query.isEmpty() || item.optString("name").toLowerCase(Locale.KOREA).contains(query) ||
-                    phone.contains(digits) && !digits.isEmpty()) matches.add(phone);
+            if (item == null || item.optString("adminNote").isEmpty()) continue;
+            String haystack = (item.optString("name") + " " + item.optString("phone") + " " + item.optString("adminNote")).toLowerCase(Locale.KOREA);
+            if (!haystack.contains(query) && !(query.matches("[0-9 ()+-]+") && item.optString("phone").contains(AdminPlanner.normalizePhone(query)))) continue;
+            notes.add(item);
         }
-        for (int i = 0; i < memos.length(); i++) {
-            JSONObject item = memos.optJSONObject(i);
-            if (item == null) continue;
-            String phone = item.optString("phone");
-            if (phone.isEmpty()) continue;
-            long updated = item.optLong("updated_at");
-            if (updated >= latest.getOrDefault(phone, 0L)) titles.put(phone, item.optString("title"));
-            latest.put(phone, Math.max(latest.getOrDefault(phone, 0L), updated));
-            if (updated >= nameTimes.getOrDefault(phone, -1L)) {
-                nameTimes.put(phone, updated); names.put(phone, item.optString("name", "고객"));
-            }
-            memoCounts.put(phone, memoCounts.getOrDefault(phone, 0) + 1);
-            String searchable = (item.optString("name") + " " + item.optString("title") + " " +
-                    item.optString("content")).toLowerCase(Locale.KOREA);
-            if (query.isEmpty() || searchable.contains(query) || phone.contains(digits) && !digits.isEmpty()) matches.add(phone);
-        }
-        ArrayList<String> phones = new ArrayList<>(matches);
-        Collections.sort(phones, (a, b) -> {
-            if (memoSort == 2) return names.getOrDefault(a, "고객").compareTo(names.getOrDefault(b, "고객"));
-            if (memoSort == 3) return titles.getOrDefault(a, "").compareTo(titles.getOrDefault(b, ""));
-            return memoSort == 1 ? Long.compare(latest.getOrDefault(a, 0L), latest.getOrDefault(b, 0L)) :
-                    Long.compare(latest.getOrDefault(b, 0L), latest.getOrDefault(a, 0L));
+        Collections.sort(notes, (a, b) -> {
+            if (memoSort == 2) return a.optString("name").compareTo(b.optString("name"));
+            if (memoSort == 3) return a.optString("date").compareTo(b.optString("date"));
+            return memoSort == 1 ? Long.compare(a.optLong("adminNoteUpdatedAt"), b.optLong("adminNoteUpdatedAt")) :
+                    Long.compare(b.optLong("adminNoteUpdatedAt"), a.optLong("adminNoteUpdatedAt"));
         });
-        count.setText("고객 메모  ·  " + latest.size() + "명");
-        notice.setText("표시 " + phones.size() + "명 · 번호를 누르면 메모가 열립니다.");
-        if (phones.isEmpty()) { emptyCard("찾는 고객이 없습니다."); return; }
-        for (String phone : phones) {
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(16), dp(14), dp(16), dp(14));
-            card.setBackground(background(Color.WHITE, 15));
-            card.addView(label(names.getOrDefault(phone, "고객") + "   ›", 18, NAVY, true));
-            card.addView(label(phone + "  ·  메모 " + memoCounts.getOrDefault(phone, 0) + "건  ·  " +
-                    displayDate(latest.getOrDefault(phone, 0L)), 12, MUTED, false), margins(4, 0));
-            card.setOnClickListener(view -> { selectedMemoPhone = phone; renderMemos(); });
-            list.addView(card, margins(7, 0));
+        count.setText("신청서 메모"); notice.setText("메모 " + notes.size() + "건 · 누르면 해당 신청서 열기");
+        if (notes.isEmpty()) emptyCard("신청서에 메모를 남기면 여기에 모아 보여드려요.");
+        for (JSONObject item : notes) {
+            LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(touchBackground(Color.WHITE, 14));
+            card.addView(label(item.optString("name") + " 님 · " + item.optString("phone"), 16, NAVY, true));
+            card.addView(label(RequestSummary.date(item.optString("date")) + " · " + RequestNotes.calendarTime(item), 12, BLUE, false), margins(5, 0));
+            TextView content = label(item.optString("adminNote"), 15, NAVY, false); content.setMaxLines(3); content.setEllipsize(TextUtils.TruncateAt.END);
+            card.addView(content, margins(8, 0));
+            card.setOnClickListener(v -> showDetail(item)); list.addView(card, margins(7, 0));
         }
-    }
-
-    private void renderCustomerMemos() {
-        String phone = selectedMemoPhone;
-        String name = customerName(phone);
-        ArrayList<JSONObject> customerMemos = new ArrayList<>();
+        // Keep existing notes readable without guessing which same-phone request they belong to.
+        ArrayList<JSONObject> legacy = new ArrayList<>();
         for (int i = 0; i < memos.length(); i++) {
-            JSONObject item = memos.optJSONObject(i);
-            if (item != null && phone.equals(item.optString("phone"))) customerMemos.add(item);
+            JSONObject item = memos.optJSONObject(i); if (item == null) continue;
+            String text = (item.optString("name") + " " + item.optString("phone") + " " + item.optString("title") + " " + item.optString("content")).toLowerCase(Locale.KOREA);
+            if (text.contains(query)) legacy.add(item);
         }
-        Collections.sort(customerMemos, (a, b) -> {
-            if (memoSort == 3) return a.optString("title").compareTo(b.optString("title"));
-            return memoSort == 1 ? Long.compare(a.optLong("updated_at"), b.optLong("updated_at")) :
-                    Long.compare(b.optLong("updated_at"), a.optLong("updated_at"));
-        });
-        count.setText(name + " 님의 메모");
-        notice.setText(phone + " · 메모 " + customerMemos.size() + "건");
-        Button back = button("← 고객 목록", MUTED);
-        list.addView(back, margins(7, 3));
-        back.setOnClickListener(view -> { selectedMemoPhone = ""; renderMemos(); });
-        if (customerMemos.isEmpty()) { emptyCard("아직 메모가 없습니다. 위의 '새 메모'를 눌러 작성해 주세요."); return; }
-        for (JSONObject item : customerMemos) {
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(16), dp(14), dp(16), dp(14));
-            card.setBackground(background(Color.WHITE, 15));
-            card.addView(label(item.optString("title"), 18, NAVY, true));
-            card.addView(label(displayDate(item.optLong("updated_at")), 12, MUTED, false), margins(4, 4));
-            String content = item.optString("content");
-            card.addView(label(content.length() > 120 ? content.substring(0, 120) + "…" : content, 14, NAVY, false));
-            card.setOnClickListener(view -> editMemo(item, "", ""));
-            list.addView(card, margins(7, 0));
+        Collections.sort(legacy, (a, b) -> memoSort == 2 ? a.optString("name").compareTo(b.optString("name")) :
+                memoSort == 1 ? Long.compare(a.optLong("updated_at"), b.optLong("updated_at")) : Long.compare(b.optLong("updated_at"), a.optLong("updated_at")));
+        if (!legacy.isEmpty()) list.addView(label("이전 메모 · 신청서 연결 전 기록", 13, MUTED, true), margins(24, 8));
+        for (JSONObject item : legacy) {
+            LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(touchBackground(Color.WHITE, 14));
+            card.addView(label(item.optString("name") + " · " + item.optString("title"), 15, NAVY, true));
+            TextView content = label(item.optString("content"), 14, MUTED, false); content.setMaxLines(3); content.setEllipsize(TextUtils.TruncateAt.END);
+            card.addView(content, margins(6, 0)); card.setOnClickListener(v -> editMemo(item, "", "")); list.addView(card, margins(7, 0));
         }
     }
 
@@ -767,27 +724,30 @@ public final class MainActivity extends Activity {
         LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
         detailLine(belongings, "예상 수거량", item.optString("amount"));
         detailLine(belongings, "문의 내용", item.optString("message", "없음"));
+        LinearLayout admin = detailSection(body, "관리자 기록");
+        detailLine(admin, "예약 시간", item.optString("reservedTime").isEmpty() ? "등록 안됨" : item.optString("reservedTime"));
+        detailLine(admin, "신청서 메모", item.optString("adminNote"));
+        Button manage = AdminPlanner.button(this, "예약 시간 · 메모 수정", BLUE, SURFACE, R.drawable.ic_material_edit);
+        admin.addView(manage, margins(12, 0));
         ScrollView detailScroll = new ScrollView(this);
         detailScroll.setFillViewport(false);
         detailScroll.addView(body);
         shell.addView(detailScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
-        actions.setPadding(dp(12), dp(10), dp(12), dp(12));
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setPadding(dp(8), dp(8), dp(8), dp(8));
         actions.setBackgroundColor(Color.WHITE);
-        LinearLayout contactActions = new LinearLayout(this);
-        LinearLayout statusActions = new LinearLayout(this);
-        actions.addView(contactActions);
-        actions.addView(statusActions, margins(8, 0));
+        LinearLayout contactActions = actions;
+        LinearLayout statusActions = actions;
         LinearLayout dial = detailAction(contactActions, "전화", R.drawable.ic_material_call, Color.WHITE, CORAL);
-        LinearLayout contact = detailAction(contactActions, "연락처 추가", R.drawable.ic_material_person_add, NAVY, SURFACE);
+        LinearLayout contact = detailAction(contactActions, "연락처 추가", R.drawable.ic_material_person_add, Color.WHITE, BLUE);
         LinearLayout addMemo = detailAction(contactActions, "메모 작성", R.drawable.ic_material_note_add, NAVY, SURFACE);
-        LinearLayout contacted = detailAction(statusActions, "연락 완료", R.drawable.ic_material_call, BLUE,
+        LinearLayout contacted = detailAction(statusActions, "연락 완료", R.drawable.ic_material_contacts, BLUE,
                 "contacted".equals(status) ? Color.rgb(221, 235, 250) : SURFACE);
         LinearLayout done = detailAction(statusActions, "처리 완료", R.drawable.ic_material_check_circle, GREEN,
                 "done".equals(status) ? Color.rgb(221, 243, 231) : SURFACE);
-        LinearLayout delete = detailAction(statusActions, "삭제", R.drawable.ic_material_delete, CORAL, Color.rgb(255, 240, 237));
+        LinearLayout delete = detailAction(statusActions, "삭제", R.drawable.ic_material_delete, MUTED, Color.WHITE);
         shell.addView(actions);
         Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -809,9 +769,10 @@ public final class MainActivity extends Activity {
         });
         contacted.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "contacted"); });
         done.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "done"); });
-        addMemo.setOnClickListener(view -> { dialog.dismiss(); selectedMemoPhone = phone; editMemo(null, name, phone); });
+        addMemo.setOnClickListener(view -> { dialog.dismiss(); editRequestNote(item); });
+        manage.setOnClickListener(view -> { dialog.dismiss(); editRequestNote(item); });
         delete.setOnClickListener(view -> new AlertDialog.Builder(this).setTitle("신청서 삭제")
-                .setMessage(name + " 님의 신청서를 삭제할까요? 삭제한 신청서는 복구할 수 없습니다.")
+                .setMessage(name + " 님의 신청서와 이 신청서의 예약 시간·메모를 삭제할까요? 삭제 후에는 복구할 수 없습니다.")
                 .setNegativeButton("취소", null)
                 .setPositiveButton("삭제", (d, which) -> {
                     dialog.dismiss();
@@ -845,8 +806,9 @@ public final class MainActivity extends Activity {
         LinearLayout action = new LinearLayout(this);
         action.setOrientation(LinearLayout.VERTICAL);
         action.setGravity(Gravity.CENTER);
-        action.setPadding(dp(4), dp(10), dp(4), dp(10));
-        action.setMinimumHeight(dp(64));
+        action.setPadding(dp(2), dp(8), dp(2), dp(8));
+        action.setMinimumHeight(dp(48));
+        if (Build.VERSION.SDK_INT >= 26) action.setTooltipText(title);
         action.setBackground(touchBackground(fill, 12));
         action.setFocusable(true);
         action.setContentDescription(title);
@@ -857,19 +819,9 @@ public final class MainActivity extends Activity {
                 info.setClassName(Button.class.getName());
             }
         });
-        action.addView(icon(resource, color, null), new LinearLayout.LayoutParams(dp(30), dp(30)));
-        TextView caption = label(title, 11, color, true);
-        caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        caption.setGravity(Gravity.CENTER);
-        caption.setIncludeFontPadding(false);
-        caption.setMinLines(2);
-        caption.setMaxLines(2);
-        caption.setEllipsize(TextUtils.TruncateAt.END);
-        action.addView(caption, margins(6, 0));
-        // Reserve identical two-line label space, including larger system font sizes.
-        int actionHeight = Math.max(dp(84), dp(56) + caption.getLineHeight() * 2);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, actionHeight, 1);
-        if (parent.getChildCount() > 0) params.leftMargin = dp(6);
+        action.addView(icon(resource, color, null), new LinearLayout.LayoutParams(dp(26), dp(26)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
+        if (parent.getChildCount() > 0) params.leftMargin = dp("삭제".equals(title) ? 8 : 3);
         parent.addView(action, params);
         return action;
     }
@@ -934,7 +886,7 @@ public final class MainActivity extends Activity {
                         JSONObject data = new JSONObject().put("name", n).put("phone", p).put("title", t).put("content", c);
                         if (existing != null) data.put("id", existing.optString("id"));
                         ApiClient.request(this, "POST", "/api/admin/native-memos", data, session());
-                        runOnUiThread(() -> { dialog.dismiss(); memoPage = true; calendarPage = false; selectedMemoPhone = p; render(); });
+                        runOnUiThread(() -> { dialog.dismiss(); memoPage = true; calendarPage = false; render(); });
                     } catch (Exception error) {
                         runOnUiThread(() -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true));
                         showError(error);

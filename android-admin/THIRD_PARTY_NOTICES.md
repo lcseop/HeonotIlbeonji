@@ -9,4 +9,4 @@ The complete license is bundled in `app/src/main/assets/licenses/material-icons.
 
 Icons: schedule, call, check_circle, person_off, person, expand_more,
 chevron_right, chevron_left, close, location_on, note_add, person_add, delete,
-settings, contacts, calendar_month, history, edit.
+settings, contacts, calendar_month, history, edit, today.

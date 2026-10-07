@@ -1,5 +1,5 @@
 import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer } from '@/lib/admin';
-import { editManualPickup, parseManualPickup } from '@/lib/admin-planner';
+import { editManualPickup, parseManualPickup, parseAdminDetails, saveAdminDetails } from '@/lib/admin-planner';
 import { pickupDb, serverSettings } from '@/lib/admin-runtime';
 import { limitedJson } from '@/lib/pickup';
 
@@ -26,6 +26,15 @@ export async function POST(request: Request) {
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return privateJson({ message: '입력 형식이 올바르지 않습니다.' }, 400); }
+  if (data.action === 'adminDetails') {
+    const details = parseAdminDetails(data);
+    if (!details || typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.id))
+      return privateJson({ message: '예약 시간과 메모를 확인해 주세요.' }, 400);
+    try {
+      const updated = await saveAdminDetails(auth.db!, data.id, details);
+      return privateJson(updated ? { updated: true } : { message: '신청서를 찾지 못했습니다.' }, updated ? 200 : 404);
+    } catch { return privateJson({ message: '예약 시간과 메모를 저장하지 못했습니다.' }, 503); }
+  }
   if (data.action === 'create' || data.action === 'edit') {
     const pickup = parseManualPickup(data);
     if (!pickup || typeof data.requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.requestId))

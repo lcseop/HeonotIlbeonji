@@ -10,6 +10,9 @@ export type PickupRecord = {
   pickupMethod: string;
   message: string;
   status: 'new' | 'contacted' | 'done';
+  reservedTime: string;
+  adminNote: string;
+  adminNoteUpdatedAt: number;
 };
 
 export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'timeSlot' | 'pickupMethod' | 'message'>;
@@ -32,15 +35,18 @@ export async function ensureTables(db: D1Database) {
     date TEXT NOT NULL, time_slot TEXT NOT NULL DEFAULT '미기재',
     pickup_method TEXT NOT NULL DEFAULT '미기재',
     message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
-    last_activity_at INTEGER NOT NULL DEFAULT 0
+    last_activity_at INTEGER NOT NULL DEFAULT 0,
+    reserved_time TEXT NOT NULL DEFAULT '', admin_note TEXT NOT NULL DEFAULT '',
+    admin_note_updated_at INTEGER NOT NULL DEFAULT 0
   )`).run();
   const columns = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
-  for (const column of ['time_slot', 'pickup_method', 'last_activity_at']) {
+  for (const column of ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at']) {
     if (columns.results.some(item => item.name === column)) continue;
     try {
-      await db.prepare(column === 'last_activity_at'
-        ? 'ALTER TABLE pickup_requests ADD COLUMN last_activity_at INTEGER NOT NULL DEFAULT 0'
-        : `ALTER TABLE pickup_requests ADD COLUMN ${column} TEXT NOT NULL DEFAULT '미기재'`).run();
+      const definition = ['last_activity_at', 'admin_note_updated_at'].includes(column)
+        ? 'INTEGER NOT NULL DEFAULT 0'
+        : `TEXT NOT NULL DEFAULT '${['time_slot', 'pickup_method'].includes(column) ? '미기재' : ''}'`;
+      await db.prepare(`ALTER TABLE pickup_requests ADD COLUMN ${column} ${definition}`).run();
     } catch (error) {
       // Another request may have added the column first; verify before continuing.
       const current = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
@@ -87,7 +93,8 @@ export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: 
 export async function listPickups(db: D1Database) {
   await ensureTables(db);
   const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
-    time_slot AS timeSlot, pickup_method AS pickupMethod, message, status
+    time_slot AS timeSlot, pickup_method AS pickupMethod, message, status,
+    reserved_time AS reservedTime, admin_note AS adminNote, admin_note_updated_at AS adminNoteUpdatedAt
     FROM pickup_requests ORDER BY created_at DESC`).all<PickupRecord>();
   return result.results;
 }

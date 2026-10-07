@@ -60,30 +60,26 @@ public class RequestInteractionTest {
             Dialog dialog = ShadowDialog.getLatestDialog();
             assertTrue(dialog.isShowing());
             assertNotNull(text(dialog.getWindow().getDecorView(), "홍길동 님의 신청"));
-            assertNotNull(text(dialog.getWindow().getDecorView(), "전화"));
-            assertNotNull(text(dialog.getWindow().getDecorView(), "메모 작성"));
-            assertNotNull(text(dialog.getWindow().getDecorView(), "26년 10월 8일 (목)"));
             View decor = dialog.getWindow().getDecorView();
-            View firstAction = (View) text(decor, "전화").getParent();
-            int height = firstAction.getLayoutParams().height;
-            for (String title : new String[]{"전화", "연락처 추가", "메모 작성", "연락 완료", "처리 완료", "삭제"}) {
-                View action = (View) text(decor, title).getParent();
-                assertEquals(title, height, action.getLayoutParams().height);
-                assertEquals(title, 0, action.getLayoutParams().width);
-            }
-            // Verify actual button geometry at a narrow phone width, not just parameters.
-            int width = Math.round(272 * activity.getResources().getDisplayMetrics().density);
+            assertNotNull(text(decor, "26년 10월 8일 (목)"));
+            assertNotNull(text(decor, "관리자 기록"));
+            View firstAction = PlannerInteractionTest.description(decor, "전화");
+            assertNotNull(firstAction);
             ViewGroup actions = (ViewGroup) firstAction.getParent();
+            assertEquals(6, actions.getChildCount());
+            int width = Math.round(272 * activity.getResources().getDisplayMetrics().density);
             actions.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.AT_MOST));
             actions.layout(0, 0, width, actions.getMeasuredHeight());
             int measuredWidth = firstAction.getMeasuredWidth(), measuredHeight = firstAction.getMeasuredHeight();
-            for (int i = 0; i < actions.getChildCount(); i++) {
-                View button = actions.getChildAt(i);
-                assertTrue(Math.abs(measuredWidth - button.getMeasuredWidth()) <= 1);
-                assertEquals(measuredHeight, button.getMeasuredHeight());
-                TextView caption = (TextView) text(button, new String[]{"전화", "연락처 추가", "메모 작성"}[i]);
-                assertTrue(caption.getBottom() <= button.getMeasuredHeight() - button.getPaddingBottom());
+            for (String title : new String[]{"전화", "연락처 추가", "메모 작성", "연락 완료", "처리 완료", "삭제"}) {
+                View action = PlannerInteractionTest.description(decor, title);
+                assertNotNull(title, action); assertSame(actions, action.getParent());
+                assertEquals(title, measuredHeight, action.getMeasuredHeight());
+                assertTrue(title, Math.abs(measuredWidth - action.getMeasuredWidth()) <= 2);
+                assertEquals(title, 0, action.getLayoutParams().width);
+                assertEquals(title, 1, ((ViewGroup) action).getChildCount());
+                assertNull(text(action, title));
             }
             dialog.dismiss();
         }
