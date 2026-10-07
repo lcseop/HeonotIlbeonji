@@ -72,6 +72,9 @@ public final class MainActivity extends Activity {
     private Calendar calendarMonth = AdminPlanner.calendar();
     private String selectedDay = AdminPlanner.iso(AdminPlanner.calendar());
     private JSONArray dayMemos = new JSONArray();
+    private JSONArray dayFinances = new JSONArray();
+    private String financeLoadedMonth = "", financeError = "";
+    private CalendarLedger.Editor ledgerEditor;
     private AdminPlanner.FormEditor contactEditor;
     private AdminPlanner.FormEditor requestEditor;
     private int requestFilter = 0;
@@ -145,10 +148,17 @@ public final class MainActivity extends Activity {
             calendarPage = state.getBoolean("calendarPage"); memoPage = state.getBoolean("memoPage");
             selectedDay = state.getString("selectedDay", selectedDay);
             calendarMonth.setTimeInMillis(state.getLong("calendarMonth", calendarMonth.getTimeInMillis()));
+            menuCollapsed = state.getBoolean("menuCollapsed");
         }
         render();
         if (state != null && state.containsKey("requestDraft") && !session().isEmpty()) {
             try { editRequest(new JSONObject(state.getString("requestDraft"))); contactEditor = requestEditor; }
+            catch (Exception ignored) { }
+        }
+        if (state != null && state.containsKey("ledgerDraft") && !session().isEmpty()) {
+            try { JSONObject draft = new JSONObject(state.getString("ledgerDraft"));
+                openDayRecord(draft.optString("date"), new JSONObject(), draft.optString("content"));
+                ledgerEditor.paid.setText(draft.optString("paidText")); ledgerEditor.received.setText(draft.optString("receivedText")); }
             catch (Exception ignored) { }
         }
     }
@@ -158,6 +168,8 @@ public final class MainActivity extends Activity {
         state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
         state.putString("selectedDay", selectedDay); state.putLong("calendarMonth", calendarMonth.getTimeInMillis());
         if (requestEditor != null && requestEditor.dialog.isShowing()) state.putString("requestDraft", requestEditor.draft().toString());
+        if (ledgerEditor != null && ledgerEditor.dialog.isShowing()) state.putString("ledgerDraft", ledgerEditor.draft().toString());
+        state.putBoolean("menuCollapsed", menuCollapsed);
     }
 
     @Override public void onResume() {
@@ -168,6 +180,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onDestroy() {
         if (requestEditor != null && requestEditor.dialog.isShowing()) requestEditor.dialog.dismiss();
+        if (ledgerEditor != null && ledgerEditor.dialog.isShowing()) ledgerEditor.dialog.dismiss();
         super.onDestroy();
         if (updater != null) updater.close();
         io.shutdownNow();
@@ -322,19 +335,6 @@ public final class MainActivity extends Activity {
             menuIcon.setBounds(0, 0, dp(22), dp(22));
             menuToggle.setCompoundDrawables(menuIcon, null, null, null);
         });
-        LinearLayout tabs = new LinearLayout(this);
-        actions.addView(tabs, margins(8, 0));
-        Button requestTab = button("신청서", !memoPage && !calendarPage ? NAVY : MUTED);
-        Button memoTab = button("메모", memoPage ? NAVY : MUTED);
-        Button calendarTab = button("달력", calendarPage ? NAVY : MUTED);
-        tabs.addView(requestTab, new LinearLayout.LayoutParams(0, dp(40), 1));
-        LinearLayout.LayoutParams calendarGap = new LinearLayout.LayoutParams(0, dp(40), 1); calendarGap.leftMargin = dp(7);
-        tabs.addView(calendarTab, calendarGap);
-        LinearLayout.LayoutParams tabGap = new LinearLayout.LayoutParams(0, dp(40), 1); tabGap.leftMargin = dp(7);
-        tabs.addView(memoTab, tabGap);
-        requestTab.setOnClickListener(view -> { memoPage = false; calendarPage = false; render(); });
-        calendarTab.setOnClickListener(view -> { memoPage = false; calendarPage = true; selectedRequestId = ""; render(); });
-        memoTab.setOnClickListener(view -> { memoPage = true; calendarPage = false; render(); });
         if (!memoPage) {
             Button add = AdminPlanner.button(this, "신청서 직접 작성", Color.WHITE, CORAL, R.drawable.ic_material_note_add);
             actions.addView(add, margins(8, 0)); add.setOnClickListener(view -> newRequest());
@@ -342,12 +342,12 @@ public final class MainActivity extends Activity {
         LinearLayout controls = new LinearLayout(this);
         actions.addView(controls, margins(7, 0));
         Button sort = button("정렬", NAVY);
-        Button filter = button(memoPage ? "새 메모" : "필터", memoPage ? CORAL : NAVY);
-        Button refresh = button("새로고침", MUTED);
-        controls.addView(sort, new LinearLayout.LayoutParams(0, dp(39), 1));
-        LinearLayout.LayoutParams controlGap = new LinearLayout.LayoutParams(0, dp(39), 1); controlGap.leftMargin = dp(6);
+        Button filter = button(memoPage ? "메모 추가" : "필터", memoPage ? CORAL : NAVY);
+        ImageView refresh = AdminPlanner.iconButton(this, R.drawable.ic_material_refresh, "새로고침");
+        controls.addView(sort, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout.LayoutParams controlGap = new LinearLayout.LayoutParams(0, dp(48), 1); controlGap.leftMargin = dp(6);
         controls.addView(filter, controlGap);
-        LinearLayout.LayoutParams refreshGap = new LinearLayout.LayoutParams(0, dp(39), 1); refreshGap.leftMargin = dp(6);
+        LinearLayout.LayoutParams refreshGap = new LinearLayout.LayoutParams(dp(48), dp(48)); refreshGap.leftMargin = dp(6);
         controls.addView(refresh, refreshGap);
         sort.setOnClickListener(view -> chooseSort());
         filter.setOnClickListener(view -> { if (memoPage) chooseRequestNote(); else chooseFilter(); });
@@ -377,10 +377,41 @@ public final class MainActivity extends Activity {
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(dp(16), 0, dp(16), dp(22));
         scroll.addView(list);
+        addNavigation();
         refresh.setOnClickListener(view -> refresh());
         if (memoPage) renderMemos(); else renderRequests();
         refresh();
     }
+
+    private void addNavigation() {
+        LinearLayout navigation = new LinearLayout(this);
+        navigation.setPadding(dp(8), dp(5), dp(8), dp(5)); navigation.setBackgroundColor(Color.WHITE);
+        navigation.setContentDescription("화면 이동 메뉴");
+        String[] titles = {"신청서", "달력", "메모"};
+        int[] icons = {R.drawable.ic_material_inbox, R.drawable.ic_material_calendar_month, R.drawable.ic_material_notes};
+        int active = memoPage ? 2 : calendarPage ? 1 : 0;
+        for (int i = 0; i < titles.length; i++) {
+            final int page = i;
+            LinearLayout tab = new LinearLayout(this); tab.setOrientation(LinearLayout.VERTICAL);
+            tab.setGravity(Gravity.CENTER); tab.setBackground(touchBackground(i == active ? Color.rgb(231, 240, 249) : Color.WHITE, 12));
+            tab.setFocusable(true); tab.setContentDescription(titles[i] + (i == active ? ", 선택됨" : ", 이동"));
+            tab.setSelected(i == active);
+            tab.addView(icon(icons[i], i == active ? BLUE : MUTED, null), new LinearLayout.LayoutParams(dp(24), dp(24)));
+            TextView tabTitle = label(titles[i], 13, i == active ? BLUE : MUTED, i == active);
+            tabTitle.setGravity(Gravity.CENTER); tab.addView(tabTitle, margins(4, 0));
+            navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(62), 1));
+            tab.setOnClickListener(v -> {
+                if (page == active) {
+                    if (list != null) ((ScrollView) list.getParent()).smoothScrollTo(0, 0);
+                    return;
+                }
+                memoPage = page == 2; calendarPage = page == 1; selectedRequestId = ""; render();
+            });
+        }
+        root.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private String financeMonth() { return AdminPlanner.iso(calendarMonth).substring(0, 7); }
 
     private void showSettings() {
         String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃"};
@@ -399,6 +430,7 @@ public final class MainActivity extends Activity {
     private void refresh() {
         if (list == null || session().isEmpty()) return;
         final boolean loadMemos = memoPage, loadCalendar = calendarPage;
+        final String month = financeMonth();
         notice.setText(memoPage ? "메모를 불러오는 중…" : "신청 내용을 불러오는 중…");
         io.execute(() -> {
             try {
@@ -409,14 +441,29 @@ public final class MainActivity extends Activity {
                 } else {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
                     JSONArray notes = loadCalendar ? ApiClient.request(this, "GET", "/api/admin/native-day-memos", null, session()).getJSONArray("memos") : null;
+                    JSONArray finances = null; String loadError = "";
+                    if (loadCalendar) {
+                        try { finances = ApiClient.request(this, "GET", "/api/admin/native-day-finances?month=" + month, null, session()).getJSONArray("records"); }
+                        catch (Exception e) { loadError = e.getMessage(); }
+                    }
+                    final JSONArray loadedFinances = finances; final String financialError = loadError;
                     runOnUiThread(() -> { requests = loaded; if (notes != null) dayMemos = notes;
+                        if (loadCalendar && month.equals(financeMonth())) {
+                            financeError = financialError;
+                            if (loadedFinances != null) { dayFinances = loadedFinances; financeLoadedMonth = month; }
+                        }
                         if (!memoPage && calendarPage == loadCalendar) renderRequests(); });
                 }
             } catch (Exception error) {
                 runOnUiThread(() -> {
                     if (error instanceof ApiClient.ApiException && ((ApiClient.ApiException) error).status == 401) {
                         saveSession(""); render();
-                    } else if (notice != null) notice.setText(error.getMessage());
+                    } else {
+                        if (loadCalendar && calendarPage && month.equals(financeMonth())) {
+                            financeError = error.getMessage(); renderRequests();
+                        }
+                        if (notice != null) notice.setText(error.getMessage());
+                    }
                 });
             }
         });
@@ -437,7 +484,7 @@ public final class MainActivity extends Activity {
             JSONObject item = requests.optJSONObject(i);
             if (item != null && "new".equals(item.optString("status"))) unread++;
         }
-        count.setText(calendarPage ? "수거 달력" : "수거 신청함  ·  새 신청 " + unread);
+        count.setText(calendarPage ? "수거 달력" : "신청서 · 새 " + unread + "건");
         ArrayList<JSONObject> visible = new ArrayList<>();
         for (int i = 0; i < requests.length(); i++) {
             JSONObject item = requests.optJSONObject(i);
@@ -456,19 +503,28 @@ public final class MainActivity extends Activity {
             return requestSort == 1 ? Long.compare(a.optLong("created_at"), b.optLong("created_at")) :
                     Long.compare(b.optLong("created_at"), a.optLong("created_at"));
         });
-        notice.setText(calendarPage ? "날짜를 누르면 신청서와 메모를 볼 수 있어요" : "표시 " + visible.size() + "건 · 누르면 요약, 상세 보기로 전체 확인");
+        notice.setText(calendarPage ? "날짜를 눌러 일정·금액·메모를 확인하세요" : "표시 " + visible.size() + "건 · 누르면 요약, 상세 보기로 전체 확인");
         if (calendarPage) {
-            list.addView(AdminPlanner.month(this, calendarMonth, selectedDay, requests, requestFilter, dayMemos,
-                    day -> { selectedDay = day; selectedRequestId = ""; renderRequests(); },
+            list.addView(AdminPlanner.month(this, calendarMonth, selectedDay, requests, requestFilter, dayMemos, dayFinances,
+                    this::selectCalendarDay,
                     offset -> { calendarMonth.set(Calendar.DAY_OF_MONTH, 1); calendarMonth.add(Calendar.MONTH, offset);
-                        selectedDay = AdminPlanner.iso(calendarMonth); selectedRequestId = ""; renderRequests(); }), margins(6, 0));
+                        selectedDay = AdminPlanner.iso(calendarMonth); selectedRequestId = ""; financeError = ""; renderRequests(); refresh(); }), margins(6, 0));
+            if (financeLoadedMonth.equals(financeMonth())) {
+                long[] totals = CalendarLedger.totals(dayFinances, financeMonth());
+                LinearLayout stats = CalendarLedger.summary(this, (calendarMonth.get(Calendar.MONTH) + 1) + "월 금액 합계", totals[0], totals[1]);
+                stats.addView(label("차액 = 받은 금액 − 준 금액", 12, MUTED, false), margins(10, 0));
+                if (!financeError.isEmpty()) stats.addView(label("새로고침 실패 · 이전에 불러온 금액입니다", 12, CORAL, false), margins(6, 0));
+                list.addView(stats, margins(10, 0));
+            }
             LinearLayout dayHeader = new LinearLayout(this); dayHeader.setGravity(Gravity.CENTER_VERTICAL);
+            dayHeader.setTag("selected-day-header");
             TextView dayTitle = label(RequestSummary.date(selectedDay) + " · " + visible.size() + "건", 16, NAVY, true);
             dayHeader.addView(dayTitle, new LinearLayout.LayoutParams(0, -2, 1));
             ImageView today = AdminPlanner.iconButton(this, R.drawable.ic_material_today, "오늘로 이동");
-            today.setOnClickListener(v -> { calendarMonth = AdminPlanner.calendar(); selectedDay = AdminPlanner.iso(calendarMonth); renderRequests(); });
+            today.setOnClickListener(v -> { calendarMonth = AdminPlanner.calendar(); selectedDay = AdminPlanner.iso(calendarMonth); financeError = ""; renderRequests(); refresh(); });
             dayHeader.addView(today, new LinearLayout.LayoutParams(dp(48), dp(48)));
             list.addView(dayHeader, margins(12, 4));
+            renderDayRecord();
         }
         if (visible.isEmpty()) emptyCard("해당하는 신청서가 없습니다.");
         for (JSONObject item : visible) {
@@ -560,7 +616,6 @@ public final class MainActivity extends Activity {
             if (expanded) collapseRequestSummary = collapse;
             list.addView(card, margins(6, 0));
         }
-        if (calendarPage) renderDayMemo();
     }
 
     // Keep the existing list and calendar attached; only change the selected card.
@@ -578,6 +633,20 @@ public final class MainActivity extends Activity {
 
     private void newRequest() {
         editRequest(null);
+    }
+
+    private void selectCalendarDay(String day) {
+        selectedDay = day; selectedRequestId = ""; renderRequests();
+        // Move to the selected day's records after the rebuilt calendar has laid out.
+        final LinearLayout currentList = list;
+        currentList.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override public void onGlobalLayout() {
+                currentList.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                if (list != currentList || !calendarPage || !day.equals(selectedDay)) return;
+                View header = currentList.findViewWithTag("selected-day-header");
+                if (header != null) ((ScrollView) currentList.getParent()).smoothScrollTo(0, header.getTop());
+            }
+        });
     }
     private void editRequest(JSONObject existing) {
         requestEditor = new AdminPlanner.FormEditor(this, calendarPage ? selectedDay : "", existing, editor -> {
@@ -618,26 +687,56 @@ public final class MainActivity extends Activity {
         contactEditor = null;
     }
 
-    private void renderDayMemo() {
+    private void renderDayRecord() {
         String content = "";
         for (int i = 0; i < dayMemos.length(); i++) {
             JSONObject note = dayMemos.optJSONObject(i);
             if (note != null && selectedDay.equals(note.optString("date"))) content = note.optString("content");
         }
         final String existing = content;
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(background(Color.WHITE, 14));
-        card.addView(label("날짜 메모", 16, NAVY, true));
+        boolean loaded = financeLoadedMonth.equals(financeMonth());
+        JSONObject record = CalendarLedger.day(dayFinances, selectedDay);
+        LinearLayout card;
+        if (loaded) card = CalendarLedger.daySummary(this, record.optLong("paidAmount"), record.optLong("receivedAmount"));
+        else {
+            card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(background(Color.WHITE, 14));
+            card.addView(label("하루 금액 · 메모", 16, NAVY, true));
+            card.addView(label(financeError.isEmpty() ? "금액 기록을 불러오는 중…" : "금액 기록을 불러오지 못했습니다", 13, MUTED, false), margins(10, 0));
+        }
         TextView body = label(content.isEmpty() ? "동선·휴무·재연락할 내용을 남겨 보세요." : content, 14, MUTED, false);
         body.setLineSpacing(dp(4), 1); card.addView(body, margins(8, 12));
-        Button edit = AdminPlanner.button(this, content.isEmpty() ? "날짜 메모 작성" : "날짜 메모 수정", BLUE, SURFACE, R.drawable.ic_material_note_add);
-        card.addView(edit); edit.setOnClickListener(v -> AdminPlanner.editNote(this, selectedDay, existing, (day, note, result) -> io.execute(() -> {
+        Button edit = AdminPlanner.button(this, loaded ? "금액 · 메모 수정" : "다시 불러오기", BLUE, SURFACE, R.drawable.ic_material_edit);
+        card.addView(edit); edit.setOnClickListener(v -> {
+            if (!loaded) refresh(); else openDayRecord(selectedDay, record, existing);
+        });
+        list.addView(card, margins(4, 10));
+    }
+
+    private void openDayRecord(String day, JSONObject record, String content) {
+        ledgerEditor = new CalendarLedger.Editor(this, day, record, content, (data, result) -> io.execute(() -> {
             try {
-                ApiClient.request(this, "POST", "/api/admin/native-day-memos", new JSONObject().put("date", day).put("content", note), session());
-                runOnUiThread(() -> { result.accept(null); refresh(); });
+                ApiClient.request(this, "POST", "/api/admin/native-day-finances", data, session());
+                runOnUiThread(() -> {
+                    if (day.startsWith(financeMonth() + "-") && financeLoadedMonth.equals(financeMonth())) {
+                        JSONArray updated = new JSONArray();
+                        for (int i = 0; i < dayFinances.length(); i++) {
+                            JSONObject previous = dayFinances.optJSONObject(i);
+                            if (previous != null && !day.equals(previous.optString("date"))) updated.put(previous);
+                        }
+                        updated.put(data); dayFinances = updated;
+                    }
+                    JSONArray notes = new JSONArray();
+                    for (int i = 0; i < dayMemos.length(); i++) {
+                        JSONObject previous = dayMemos.optJSONObject(i);
+                        if (previous != null && !day.equals(previous.optString("date"))) notes.put(previous);
+                    }
+                    if (!data.optString("content").isEmpty()) notes.put(data); dayMemos = notes;
+                    result.accept(null); if (calendarPage) renderRequests(); refresh();
+                    Toast.makeText(this, "하루 기록을 저장했습니다.", Toast.LENGTH_SHORT).show();
+                });
             } catch (Exception e) { runOnUiThread(() -> result.accept(e.getMessage())); }
-        })));
-        list.addView(card, margins(14, 8));
+        }));
     }
 
     private void emptyCard(String message) {

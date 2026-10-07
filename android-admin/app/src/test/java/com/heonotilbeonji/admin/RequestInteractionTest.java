@@ -39,8 +39,8 @@ public class RequestInteractionTest {
                 LinearLayout list = (LinearLayout) field("list").get(activity);
                 View[] original = new View[list.getChildCount()];
                 for (int i = 0; i < original.length; i++) original[i] = list.getChildAt(i);
-                int offset = calendar ? 2 : 0;
-                ViewGroup first = (ViewGroup) original[offset], second = (ViewGroup) original[offset + 1];
+                ViewGroup first = (ViewGroup) PlannerInteractionTest.text(list, "고객0 님").getParent().getParent().getParent();
+                ViewGroup second = (ViewGroup) PlannerInteractionTest.text(list, "고객1 님").getParent().getParent().getParent();
                 for (int repeat = 0; repeat < 4; repeat++) {
                     first.getChildAt(0).performClick();
                     assertEquals(View.VISIBLE, first.getChildAt(1).getVisibility());

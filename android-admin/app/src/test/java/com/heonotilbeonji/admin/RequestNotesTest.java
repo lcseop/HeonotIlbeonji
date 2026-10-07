@@ -57,8 +57,9 @@ public class RequestNotesTest {
             LinearLayout shell = (LinearLayout) rootField.get(a); shell.removeAllViews();
             var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(a);
             View toggle = PlannerInteractionTest.text(shell, "메뉴 접기");
-            View actions = (View) PlannerInteractionTest.text(shell, "신청서").getParent().getParent();
-            ScrollView scroll = (ScrollView) shell.getChildAt(shell.getChildCount() - 1);
+            View actions = (View) PlannerInteractionTest.text(shell, "신청서 직접 작성").getParent();
+            View navigation = PlannerInteractionTest.description(shell, "화면 이동 메뉴");
+            ScrollView scroll = (ScrollView) shell.getChildAt(shell.getChildCount() - 2);
             assertEquals(ScrollView.class, scroll.getClass());
             assertEquals(View.VISIBLE, actions.getVisibility());
             scroll.scrollTo(0, 100);
@@ -68,6 +69,8 @@ public class RequestNotesTest {
                 assertEquals(View.GONE, actions.getVisibility());
                 assertEquals("메뉴 펼치기", ((TextView) toggle).getText().toString());
                 assertEquals(View.VISIBLE, ((View) toggle.getParent()).getVisibility());
+                assertEquals(View.VISIBLE, navigation.getVisibility());
+                assertNotNull(PlannerInteractionTest.description(navigation, "달력, 이동"));
                 ((TextView) toggle).setTextSize(20);
                 View header = (View) toggle.getParent();
                 int width = AdminPlanner.dp(a, 320);

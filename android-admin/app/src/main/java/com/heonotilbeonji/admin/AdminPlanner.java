@@ -71,6 +71,10 @@ final class AdminPlanner {
 
     static View month(Activity a, Calendar month, String selected, JSONArray requests, int filter,
                       JSONArray notes, Consumer<String> select, Consumer<Integer> move) {
+        return month(a, month, selected, requests, filter, notes, new JSONArray(), select, move);
+    }
+    static View month(Activity a, Calendar month, String selected, JSONArray requests, int filter,
+                      JSONArray notes, JSONArray finances, Consumer<String> select, Consumer<Integer> move) {
         LinearLayout panel = column(a); panel.setPadding(dp(a, 10), dp(a, 8), dp(a, 10), dp(a, 10));
         panel.setBackground(bg(a, Color.WHITE, 16));
         LinearLayout header = new LinearLayout(a); header.setGravity(Gravity.CENTER_VERTICAL);
@@ -112,6 +116,8 @@ final class AdminPlanner {
                     JSONObject memo = notes.optJSONObject(n);
                     if (memo != null && date.equals(memo.optString("date"))) hasMemo = true;
                 }
+                JSONObject money = CalendarLedger.day(finances, date);
+                boolean hasMoney = money.optLong("paidAmount") != 0 || money.optLong("receivedAmount") != 0;
                 boolean active = date.equals(selected);
                 GradientDrawable background = bg(a, active ? NAVY : date.equals(today) ? SURFACE : Color.WHITE, 10);
                 if (date.equals(today)) background.setStroke(dp(a, 1), BLUE);
@@ -119,12 +125,12 @@ final class AdminPlanner {
                 TextView dayNumber = text(a, String.valueOf(number), 15, active ? Color.WHITE : i == 0 ? CORAL : NAVY, true);
                 dayNumber.setGravity(Gravity.CENTER); dayNumber.setIncludeFontPadding(false);
                 cell.addView(dayNumber, new LinearLayout.LayoutParams(-1, -2));
-                TextView badge = text(a, count > 0 ? count + "건" : hasMemo ? "메모" : "", 10, active ? Color.WHITE : BLUE, true);
+                TextView badge = text(a, count > 0 ? count + "건" : hasMoney ? "금액" : hasMemo ? "메모" : "", 10, active ? Color.WHITE : BLUE, true);
                 badge.setGravity(Gravity.CENTER); badge.setIncludeFontPadding(false); badge.setSingleLine(true);
                 badge.setMinHeight(dp(a, 20));
                 LinearLayout.LayoutParams badgeSpace = new LinearLayout.LayoutParams(-1, -2);
                 badgeSpace.topMargin = dp(a, 5); cell.addView(badge, badgeSpace);
-                cell.setContentDescription(RequestSummary.date(date) + ", 신청 " + count + "건" + (hasMemo ? ", 메모 있음" : ""));
+                cell.setContentDescription(RequestSummary.date(date) + ", 신청 " + count + "건" + (hasMemo ? ", 메모 있음" : "") + (hasMoney ? ", 금액 기록 있음" : ""));
                 cell.setFocusable(true); cell.setOnClickListener(v -> select.accept(date));
             }
             panel.addView(row);
