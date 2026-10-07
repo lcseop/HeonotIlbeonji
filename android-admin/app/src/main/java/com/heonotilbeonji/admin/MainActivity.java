@@ -80,6 +80,7 @@ public final class MainActivity extends Activity {
     private String memoSearch = "";
     private String selectedRequestId = "";
     private Runnable collapseRequestSummary;
+    private boolean menuCollapsed;
     private AppUpdater updater;
 
     private static final int GREEN = Color.rgb(28, 125, 87);
@@ -284,13 +285,43 @@ public final class MainActivity extends Activity {
     }
 
     private void showInbox() {
+        LinearLayout menuHeader = new LinearLayout(this);
+        menuHeader.setGravity(Gravity.CENTER_VERTICAL);
+        menuHeader.setPadding(dp(16), dp(4), dp(12), dp(4));
+        menuHeader.setBackgroundColor(SURFACE);
+        root.addView(menuHeader, new LinearLayout.LayoutParams(-1, -2));
+        count = label(memoPage ? "신청서 메모" : calendarPage ? "수거 달력" : "수거 신청함", 20, NAVY, true);
+        count.setSingleLine(true);
+        count.setEllipsize(TextUtils.TruncateAt.END);
+        menuHeader.addView(count, new LinearLayout.LayoutParams(0, -2, 1));
+        Button menuToggle = AdminPlanner.button(this, menuCollapsed ? "메뉴 펼치기" : "메뉴 접기", BLUE, Color.WHITE,
+                menuCollapsed ? R.drawable.ic_material_expand_more : R.drawable.ic_material_expand_less);
+        menuToggle.setTextSize(13);
+        menuToggle.setSingleLine(true);
+        menuHeader.addView(menuToggle, new LinearLayout.LayoutParams(-2, dp(48)));
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.VERTICAL);
         actions.setPadding(dp(16), dp(10), dp(16), dp(8));
         actions.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(actions);
-        count = label(memoPage ? "신청서 메모" : calendarPage ? "수거 달력" : "수거 신청함", 23, NAVY, true);
-        actions.addView(count);
+        actions.setVisibility(menuCollapsed ? View.GONE : View.VISIBLE);
+        menuToggle.setOnClickListener(view -> {
+            menuCollapsed = !menuCollapsed;
+            if (menuCollapsed) {
+                View focused = actions.findFocus();
+                if (focused != null) {
+                    ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                            .hideSoftInputFromWindow(focused.getWindowToken(), 0);
+                    focused.clearFocus();
+                }
+            }
+            actions.setVisibility(menuCollapsed ? View.GONE : View.VISIBLE);
+            menuToggle.setText(menuCollapsed ? "메뉴 펼치기" : "메뉴 접기");
+            Drawable menuIcon = iconDrawable(menuCollapsed ?
+                    R.drawable.ic_material_expand_more : R.drawable.ic_material_expand_less, BLUE);
+            menuIcon.setBounds(0, 0, dp(22), dp(22));
+            menuToggle.setCompoundDrawables(menuIcon, null, null, null);
+        });
         LinearLayout tabs = new LinearLayout(this);
         actions.addView(tabs, margins(8, 0));
         Button requestTab = button("신청서", !memoPage && !calendarPage ? NAVY : MUTED);
@@ -339,14 +370,13 @@ public final class MainActivity extends Activity {
         }
         notice = label("", 13, MUTED, false);
         actions.addView(notice, margins(7, 0));
-        CollapsingActions.ScrollSurface scroll = new CollapsingActions.ScrollSurface(this);
+        ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(dp(16), 0, dp(16), dp(22));
         scroll.addView(list);
-        CollapsingActions.attach(scroll, actions);
         refresh.setOnClickListener(view -> refresh());
         if (memoPage) renderMemos(); else renderRequests();
         refresh();

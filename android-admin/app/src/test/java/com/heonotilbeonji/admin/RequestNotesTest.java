@@ -15,7 +15,6 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowDialog;
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Calendar;
 import static org.robolectric.Shadows.shadowOf;
@@ -51,26 +50,37 @@ public class RequestNotesTest {
         }
     }
 
-    @Test public void toolbarCollapsesAndReturnsWhenScrollingBack() {
+    @Test public void menuOnlyChangesThroughAlwaysVisibleToggle() throws Exception {
         try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
             MainActivity a = controller.get();
-            LinearLayout shell = AdminPlanner.column(a); LinearLayout actions = AdminPlanner.column(a);
-            actions.addView(new View(a), new LinearLayout.LayoutParams(-1, AdminPlanner.dp(a, 150)));
-            shell.addView(actions);
-            CollapsingActions.ScrollSurface scroll = new CollapsingActions.ScrollSurface(a); LinearLayout rows = AdminPlanner.column(a);
-            for (int i = 0; i < 22; i++) rows.addView(new View(a), new LinearLayout.LayoutParams(-1, AdminPlanner.dp(a, 100)));
-            scroll.addView(rows);
-            shell.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-            a.setContentView(shell); CollapsingActions.attach(scroll, actions);
-            shadowOf(android.os.Looper.getMainLooper()).idle();
-            int width = AdminPlanner.dp(a, 320), height = AdminPlanner.dp(a, 640);
-            shell.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
-            shell.layout(0, 0, width, height);
-            assertTrue(scroll.getChildAt(0).getHeight() > scroll.getHeight());
-            scroll.scrollTo(0, AdminPlanner.dp(a, 100)); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
-            assertEquals(0, actions.getLayoutParams().height);
-            scroll.scrollTo(0, AdminPlanner.dp(a, 50)); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
-            assertEquals(-2, actions.getLayoutParams().height);
+            var rootField = MainActivity.class.getDeclaredField("root"); rootField.setAccessible(true);
+            LinearLayout shell = (LinearLayout) rootField.get(a); shell.removeAllViews();
+            var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(a);
+            View toggle = PlannerInteractionTest.text(shell, "메뉴 접기");
+            View actions = (View) PlannerInteractionTest.text(shell, "신청서").getParent().getParent();
+            ScrollView scroll = (ScrollView) shell.getChildAt(shell.getChildCount() - 1);
+            assertEquals(ScrollView.class, scroll.getClass());
+            assertEquals(View.VISIBLE, actions.getVisibility());
+            scroll.scrollTo(0, 100);
+            assertEquals(View.VISIBLE, actions.getVisibility());
+            for (int i = 0; i < 4; i++) {
+                toggle.performClick();
+                assertEquals(View.GONE, actions.getVisibility());
+                assertEquals("메뉴 펼치기", ((TextView) toggle).getText().toString());
+                assertEquals(View.VISIBLE, ((View) toggle.getParent()).getVisibility());
+                ((TextView) toggle).setTextSize(20);
+                View header = (View) toggle.getParent();
+                int width = AdminPlanner.dp(a, 320);
+                header.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                header.layout(0, 0, width, header.getMeasuredHeight());
+                assertEquals(0, ((TextView) toggle).getLayout().getEllipsisCount(0));
+                scroll.scrollTo(0, 0);
+                assertEquals(View.GONE, actions.getVisibility());
+                toggle.performClick();
+                assertEquals(View.VISIBLE, actions.getVisibility());
+                assertEquals("메뉴 접기", ((TextView) toggle).getText().toString());
+            }
         }
     }
 
