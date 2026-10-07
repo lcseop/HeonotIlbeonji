@@ -116,15 +116,16 @@ final class CalendarLedger {
             TextView error = AdminPlanner.text(a, "", 13, CORAL, false); body.addView(error, AdminPlanner.space(a, 8));
             LinearLayout footer = AdminPlanner.column(a); footer.setPadding(AdminPlanner.dp(a, 16), AdminPlanner.dp(a, 10), AdminPlanner.dp(a, 16), AdminPlanner.dp(a, 12));
             save = AdminPlanner.button(a, "하루 기록 저장", Color.WHITE, BLUE, R.drawable.ic_material_check_circle);
+            LinearLayout progress = LoadingTasks.indicator(a, "저장 중…"); footer.addView(progress);
             footer.addView(save); shell.addView(footer);
             save.setOnClickListener(v -> {
                 if (saving) return;
                 try {
                     JSONObject data = draft();
                     data.put("paidAmount", parseAmount(paid.getText().toString())).put("receivedAmount", parseAmount(received.getText().toString()));
-                    saving = true; save.setEnabled(false); save.setText("저장 중…"); dialog.setCancelable(false);
+                    saving = true; progress.setVisibility(android.view.View.VISIBLE); save.setEnabled(false); save.setText("저장 중…"); dialog.setCancelable(false);
                     saver.save(data, result -> a.runOnUiThread(() -> {
-                        saving = false; save.setEnabled(true); save.setText("하루 기록 저장"); dialog.setCancelable(true);
+                        saving = false; progress.setVisibility(android.view.View.GONE); save.setEnabled(true); save.setText("하루 기록 저장"); dialog.setCancelable(true);
                         if (result == null) dialog.dismiss(); else error.setText(result);
                     }));
                 } catch (Exception e) { error.setText(e.getMessage()); }

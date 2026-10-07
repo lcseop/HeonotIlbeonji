@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 15,
-  "versionName": "1.4.2",
-  "apkPath": "/admin-app/heonot-admin-1.4.2.apk",
-  "sha256": "b83a840df34a23896a256b67e585c7272016d152719000fd3394d0f53e2efbd3",
-  "size": 4276405,
-  "releaseNotes": "상태 필터 다중 선택, 화면에서 바로 정렬·필터 변경, 새 신청·연락 완료만 희망 날짜순으로 보는 미완료 날짜순 추가."
+  "versionCode": 16,
+  "versionName": "1.4.3",
+  "apkPath": "/admin-app/heonot-admin-1.4.3.apk",
+  "sha256": "46c087e15a06b09371a2a7a0bfc8fb71599a37398e89988ebfe351a7652772e9",
+  "size": 4296307,
+  "releaseNotes": "신청서·메모·하루 기록 저장 대기 개선, 저장 및 목록 로딩 표시 추가, 저장 실패 시 입력 내용 유지."
 }

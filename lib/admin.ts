@@ -28,7 +28,26 @@ export function adminReady(env: NodeJS.ProcessEnv, db?: D1Database): boolean {
     !!env.ADMIN_SESSION_SECRET && env.ADMIN_SESSION_SECRET.length >= 32;
 }
 
+const preparedDatabases = new WeakSet<D1Database>();
+
 export async function ensureTables(db: D1Database) {
+  if (!preparedDatabases.has(db)) {
+    await prepareTables(db);
+    preparedDatabases.add(db);
+  }
+  const cutoffDate = new Date();
+  cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - 10);
+  const cutoff = cutoffDate.getTime();
+  const cleanup = [
+    db.prepare('DELETE FROM calendar_memos WHERE updated_at < ?').bind(cutoff),
+    db.prepare('DELETE FROM customer_memos WHERE updated_at < ? AND phone NOT IN (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)').bind(cutoff, cutoff),
+    db.prepare('DELETE FROM pickup_requests WHERE last_activity_at < ? AND phone NOT IN (SELECT phone FROM customer_memos WHERE updated_at >= ?)').bind(cutoff, cutoff),
+  ];
+  if (typeof db.batch === 'function') await db.batch(cleanup);
+  else for (const statement of cleanup) await statement.run();
+}
+
+async function prepareTables(db: D1Database) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS pickup_requests (
     id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, name TEXT NOT NULL,
     phone TEXT NOT NULL, address TEXT NOT NULL, amount TEXT NOT NULL,
@@ -69,14 +88,7 @@ export async function ensureTables(db: D1Database) {
     date TEXT PRIMARY KEY, content TEXT NOT NULL, updated_at INTEGER NOT NULL
   )`).run();
   await db.prepare('UPDATE pickup_requests SET last_activity_at = created_at WHERE last_activity_at = 0').run();
-  const cutoffDate = new Date();
-  cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - 10);
-  const cutoff = cutoffDate.getTime();
-  await db.prepare('DELETE FROM calendar_memos WHERE updated_at < ?').bind(cutoff).run();
-  await db.prepare(`DELETE FROM customer_memos WHERE updated_at < ? AND phone NOT IN
-    (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)`).bind(cutoff, cutoff).run();
-  await db.prepare(`DELETE FROM pickup_requests WHERE last_activity_at < ? AND phone NOT IN
-    (SELECT phone FROM customer_memos WHERE updated_at >= ?)`).bind(cutoff, cutoff).run();
+
 }
 
 export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string) {

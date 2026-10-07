@@ -47,6 +47,7 @@ final class RequestNotes {
         note.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         note.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
         body.addView(note, AdminPlanner.space(a, 8));
+        LinearLayout progress = LoadingTasks.indicator(a, "저장 중…"); body.addView(progress);
         ScrollView scroll = new ScrollView(a); scroll.addView(body);
         AlertDialog dialog = new AlertDialog.Builder(a).setTitle("예약 시간 · 신청서 메모").setView(scroll)
                 .setNegativeButton("취소", null).setPositiveButton("저장", null).create();
@@ -54,8 +55,13 @@ final class RequestNotes {
             try {
                 JSONObject data = new JSONObject().put("action", "adminDetails").put("id", item.optString("id"))
                         .put("reservedTime", selected[0]).put("adminNote", note.getText().toString().trim());
+                if (!dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled()) return;
+                progress.setVisibility(android.view.View.VISIBLE); dialog.setCancelable(false);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
                 saver.save(data, error -> a.runOnUiThread(() -> {
+                    progress.setVisibility(android.view.View.GONE); dialog.setCancelable(true);
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);
                     if (error == null) dialog.dismiss();
                     else { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true); Toast.makeText(a, error, Toast.LENGTH_LONG).show(); }
                 }));

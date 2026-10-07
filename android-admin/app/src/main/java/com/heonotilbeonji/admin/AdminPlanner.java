@@ -210,6 +210,7 @@ final class AdminPlanner {
             TextView error = text(a, "", 13, CORAL, false); body.addView(error, space(a, 8));
             LinearLayout footer = column(a); footer.setPadding(dp(a, 16), dp(a, 10), dp(a, 16), dp(a, 12));
             save = button(a, "신청서 저장", Color.WHITE, CORAL, R.drawable.ic_material_check_circle);
+            LinearLayout progress = LoadingTasks.indicator(a, "저장 중…"); footer.addView(progress);
             footer.addView(save); shell.addView(footer);
             save.setOnClickListener(v -> {
                 if (saving) return;
@@ -221,8 +222,8 @@ final class AdminPlanner {
                             .put("name", n).put("phone", p).put("address", address.getText().toString().trim())
                             .put("date", date).put("timeSlot", slot.getSelectedItem()).put("pickupMethod", method.getSelectedItem())
                             .put("amount", amount.getSelectedItem()).put("message", message.getText().toString().trim());
-                    saving = true; save.setEnabled(false); save.setText("저장 중…"); dialog.setCancelable(false);
-                    saver.save(data, result -> { saving = false; dialog.setCancelable(true); save.setEnabled(true); save.setText("신청서 저장");
+                    saving = true; progress.setVisibility(android.view.View.VISIBLE); save.setEnabled(false); save.setText("저장 중…"); dialog.setCancelable(false);
+                    saver.save(data, result -> { saving = false; progress.setVisibility(android.view.View.GONE); dialog.setCancelable(true); save.setEnabled(true); save.setText("신청서 저장");
                         if (result == null) dialog.dismiss(); else error.setText(result); });
                 } catch (Exception e) { error.setText("입력 내용을 확인해 주세요."); }
             });

@@ -139,3 +139,36 @@ test('FCM sends a private-data-free alert to a registered Android device', async
   assert.equal(calls, 2);
   assert.deepEqual(result, { devices: 1, accepted: 1 });
 });
+
+
+test('warm saves skip repeated schema setup but still run retention cleanup as one batch', async () => {
+  let setup = 0, batches = 0, cleanups = 0;
+  const db = {
+    prepare(sql) {
+      const statement = {
+        bind() { return statement; },
+        all: async () => ({results: ['time_slot','pickup_method','last_activity_at','reserved_time','admin_note','admin_note_updated_at'].map(name => ({name}))}),
+        run: async () => { if (sql.startsWith('CREATE')) setup++; if (sql.startsWith('DELETE')) cleanups++; return {meta:{changes:0}}; },
+      };
+      return statement;
+    },
+    async batch(statements) { batches++; return Promise.all(statements.map(statement => statement.run())); },
+  };
+  await ensureTables(db); const first = setup;
+  await ensureTables(db);
+  assert.ok(first > 0); assert.equal(setup, first);
+  assert.equal(batches, 2); assert.equal(cleanups, 6);
+});
+
+test('failed schema preparation retries rather than caching incomplete setup', async () => {
+  let failed = false;
+  const db = database(), original = db.prepare;
+  db.prepare = function(sql) {
+    if (sql.includes('CREATE TABLE IF NOT EXISTS admin_devices') && !failed) {
+      failed = true; throw new Error('temporary database failure');
+    }
+    return original.call(this,sql);
+  };
+  await assert.rejects(ensureTables(db), /temporary database failure/);
+  await ensureTables(db);
+});

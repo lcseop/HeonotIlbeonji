@@ -54,14 +54,17 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(24, 51, 78);
     private static final int CORAL = Color.rgb(233, 84, 72);
     private static final int MUTED = Color.rgb(100, 122, 140);
-    private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final LoadingTasks io = new LoadingTasks(this, this::busyChanged);
+    private final LoadingTasks writes = new LoadingTasks(this, this::busyChanged);
+    private int busyCount;
+    private LinearLayout loadingIndicator;
+    private boolean refreshInFlight;
+    private long dataRevision;
     private LinearLayout root;
     private LinearLayout list;
     private TextView notice;
@@ -192,7 +195,7 @@ public final class MainActivity extends Activity {
         if (ledgerEditor != null && ledgerEditor.dialog.isShowing()) ledgerEditor.dialog.dismiss();
         super.onDestroy();
         if (updater != null) updater.close();
-        io.shutdownNow();
+        io.shutdownNow(); writes.shutdownNow();
     }
 
     private String session() { return getSharedPreferences("admin", MODE_PRIVATE).getString("session", ""); }
@@ -284,6 +287,8 @@ public final class MainActivity extends Activity {
         panel.addView(password, margins(35, 14));
         Button login = button("신청함 열기  →", CORAL);
         panel.addView(login, new LinearLayout.LayoutParams(-1, dp(52)));
+        loadingIndicator = LoadingTasks.indicator(this, "연결 중…");
+        panel.addView(loadingIndicator, margins(8, 0)); busyChanged(0);
         notice = label("", 13, MUTED, false);
         panel.addView(notice, margins(16, 0));
         Button server = button("서버 주소 설정", NAVY);
@@ -294,7 +299,7 @@ public final class MainActivity extends Activity {
             if (entered.isEmpty()) { notice.setText("비밀번호를 입력해 주세요."); return; }
             login.setEnabled(false);
             notice.setText("확인하고 있습니다…");
-            io.execute(() -> {
+            writes.execute(() -> {
                 try {
                     JSONObject input = new JSONObject().put("password", entered);
                     String token = ApiClient.request(this, "POST", "/api/admin/native-login", input, null).getString("token");
@@ -394,6 +399,8 @@ public final class MainActivity extends Activity {
         }
         notice = label("", 13, MUTED, false);
         actions.addView(notice, margins(7, 0));
+        loadingIndicator = LoadingTasks.indicator(this, "처리 중…");
+        root.addView(loadingIndicator, margins(4, 4)); busyChanged(0);
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -490,7 +497,9 @@ public final class MainActivity extends Activity {
     }
 
     private void refresh() {
-        if (list == null || session().isEmpty()) return;
+        if (list == null || session().isEmpty() || refreshInFlight) return;
+        refreshInFlight = true;
+        final long revision = dataRevision;
         final boolean loadMemos = memoPage, loadCalendar = calendarPage;
         final boolean loadStats = statsPage;
         final String month = financeMonth();
@@ -500,6 +509,7 @@ public final class MainActivity extends Activity {
                 if (loadStats) {
                     JSONArray finances = ApiClient.request(this, "GET", "/api/admin/native-day-finances?month=" + month, null, session()).getJSONArray("records");
                     runOnUiThread(() -> {
+                        if (revision != dataRevision) return;
                         if (!month.equals(financeMonth())) return;
                         dayFinances = finances; financeLoadedMonth = month; financeError = "";
                         if (statsPage) renderStats(); else if (calendarPage) renderRequests();
@@ -507,7 +517,8 @@ public final class MainActivity extends Activity {
                 } else if (loadMemos) {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-memos", null, session()).getJSONArray("memos");
                     JSONArray loadedRequests = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
-                    runOnUiThread(() -> { memos = loaded; requests = loadedRequests; if (memoPage) renderMemos(); });
+                    runOnUiThread(() -> {
+                        if (revision != dataRevision) return; memos = loaded; requests = loadedRequests; if (memoPage) renderMemos(); });
                 } else {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
                     JSONArray notes = loadCalendar ? ApiClient.request(this, "GET", "/api/admin/native-day-memos", null, session()).getJSONArray("memos") : null;
@@ -517,7 +528,8 @@ public final class MainActivity extends Activity {
                         catch (Exception e) { loadError = e.getMessage() == null ? "금액 기록 연결 실패" : e.getMessage(); }
                     }
                     final JSONArray loadedFinances = finances; final String financialError = loadError;
-                    runOnUiThread(() -> { requests = loaded; if (notes != null) dayMemos = notes;
+                    runOnUiThread(() -> {
+                        if (revision != dataRevision) return; requests = loaded; if (notes != null) dayMemos = notes;
                         if (loadCalendar && month.equals(financeMonth())) {
                             financeError = financialError;
                             if (loadedFinances != null) { dayFinances = loadedFinances; financeLoadedMonth = month; }
@@ -527,6 +539,7 @@ public final class MainActivity extends Activity {
                 }
             } catch (Exception error) {
                 runOnUiThread(() -> {
+                        if (revision != dataRevision) return;
                     if (error instanceof ApiClient.ApiException && ((ApiClient.ApiException) error).status == 401) {
                         saveSession(""); render();
                     } else {
@@ -537,8 +550,21 @@ public final class MainActivity extends Activity {
                         if (notice != null) notice.setText(error.getMessage());
                     }
                 });
-            }
+            } finally { runOnUiThread(() -> {
+                refreshInFlight = false;
+                if (revision != dataRevision || loadMemos != memoPage || loadCalendar != calendarPage || loadStats != statsPage || !month.equals(financeMonth())) refresh();
+            }); }
         });
+    }
+
+    private void busyChanged(int change) {
+        busyCount = Math.max(0, busyCount + change);
+        if (loadingIndicator != null) loadingIndicator.setVisibility(busyCount > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private void applySavedRequest(JSONObject data) {
+        dataRevision++; requests = RequestCache.apply(requests, data);
+        if (memoPage) renderMemos(); else if (!statsPage) renderRequests();
     }
 
     private String displayDate(long epoch) {
@@ -717,10 +743,10 @@ public final class MainActivity extends Activity {
                         (newest == null || item.optLong("created_at") > newest.optLong("created_at"))) newest = item;
             }
             return newest;
-        }, (data, result) -> io.execute(() -> {
+        }, (data, result) -> writes.execute(() -> {
             try {
                 ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
-                runOnUiThread(() -> { result.accept(null); selectedRequestId = data.optString("requestId");
+                runOnUiThread(() -> { applySavedRequest(data); result.accept(null); selectedRequestId = data.optString("requestId");
                     if ("create".equals(data.optString("action"))) {
                         requestFilter = RequestListControls.ALL;
                         if (filterControls != null) filterControls.bind(this, requestFilter);
@@ -730,7 +756,7 @@ public final class MainActivity extends Activity {
                         selectedDay = data.optString("date"); String[] parts = selectedDay.split("-");
                         calendarMonth.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1);
                     } else if (calendarPage) { calendarPage = false; render(); }
-                    refresh();
+                    if (!memoPage && !statsPage) renderRequests();
                     Toast.makeText(this, "신청서를 저장했습니다.", Toast.LENGTH_SHORT).show(); });
             } catch (Exception e) { runOnUiThread(() -> result.accept(e.getMessage())); }
         }));
@@ -774,7 +800,7 @@ public final class MainActivity extends Activity {
     }
 
     private void openDayRecord(String day, JSONObject record, String content) {
-        ledgerEditor = new CalendarLedger.Editor(this, day, record, content, (data, result) -> io.execute(() -> {
+        ledgerEditor = new CalendarLedger.Editor(this, day, record, content, (data, result) -> writes.execute(() -> {
             try {
                 ApiClient.request(this, "POST", "/api/admin/native-day-finances", data, session());
                 runOnUiThread(() -> {
@@ -792,7 +818,7 @@ public final class MainActivity extends Activity {
                         if (previous != null && !day.equals(previous.optString("date"))) notes.put(previous);
                     }
                     if (!data.optString("content").isEmpty()) notes.put(data); dayMemos = notes;
-                    result.accept(null); if (calendarPage) renderRequests(); refresh();
+                    dataRevision++; result.accept(null); if (calendarPage) renderRequests(); else if (statsPage) renderStats();
                     Toast.makeText(this, "하루 기록을 저장했습니다.", Toast.LENGTH_SHORT).show();
                 });
             } catch (Exception e) { runOnUiThread(() -> result.accept(e.getMessage())); }
@@ -837,10 +863,10 @@ public final class MainActivity extends Activity {
     }
 
     private void editRequestNote(JSONObject item) {
-        RequestNotes.edit(this, item, (data, result) -> io.execute(() -> {
+        RequestNotes.edit(this, item, (data, result) -> writes.execute(() -> {
             try {
                 ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
-                runOnUiThread(() -> { result.accept(null); refresh(); });
+                runOnUiThread(() -> { applySavedRequest(data); result.accept(null); });
             } catch (Exception error) { result.accept(error.getMessage()); }
         }));
     }
@@ -987,11 +1013,14 @@ public final class MainActivity extends Activity {
                 .setNegativeButton("취소", null)
                 .setPositiveButton("삭제", (d, which) -> {
                     dialog.dismiss();
-                    io.execute(() -> {
+                    writes.execute(() -> {
                         try {
                             ApiClient.request(this, "DELETE", "/api/admin/native-requests",
                                     new JSONObject().put("id", item.optString("id")), session());
-                            runOnUiThread(this::refresh);
+                            runOnUiThread(() -> {
+                                dataRevision++; requests = RequestCache.remove(requests, item.optString("id"));
+                                if (memoPage) renderMemos(); else if (!statsPage) renderRequests();
+                            });
                         } catch (Exception error) { showError(error); }
                     });
                 }).show());
@@ -1038,11 +1067,11 @@ public final class MainActivity extends Activity {
     }
 
     private void updateRequest(String id, String status) {
-        io.execute(() -> {
+        writes.execute(() -> {
             try {
                 ApiClient.request(this, "POST", "/api/admin/native-requests",
                         new JSONObject().put("id", id).put("status", status), session());
-                runOnUiThread(this::refresh);
+                runOnUiThread(() -> { try { applySavedRequest(new JSONObject().put("id", id).put("status", status)); } catch (Exception error) { showError(error); } });
             } catch (Exception error) { showError(error); }
         });
     }
@@ -1076,6 +1105,7 @@ public final class MainActivity extends Activity {
         phone.setInputType(InputType.TYPE_CLASS_PHONE);
         EditText title = memoField(fields, "메모 제목", existing == null ? "" : existing.optString("title"), false);
         EditText content = memoField(fields, "메모 내용", existing == null ? "" : existing.optString("content"), true);
+        LinearLayout progress = LoadingTasks.indicator(this, "저장 중…"); fields.addView(progress);
         ScrollView scroll = new ScrollView(this);
         scroll.addView(fields);
         AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle(existing == null ? "새 메모" : "메모 수정")
@@ -1091,22 +1121,30 @@ public final class MainActivity extends Activity {
                 if (n.isEmpty() || !p.matches("0\\d{8,10}") || t.isEmpty() || c.isEmpty()) {
                     Toast.makeText(this, "이름, 전화번호, 제목, 내용을 입력해 주세요.", Toast.LENGTH_LONG).show(); return;
                 }
+                progress.setVisibility(View.VISIBLE); dialog.setCancelable(false);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
+                if (existing != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-                io.execute(() -> {
+                writes.execute(() -> {
                     try {
                         JSONObject data = new JSONObject().put("name", n).put("phone", p).put("title", t).put("content", c);
                         if (existing != null) data.put("id", existing.optString("id"));
                         ApiClient.request(this, "POST", "/api/admin/native-memos", data, session());
                         runOnUiThread(() -> { dialog.dismiss(); memoPage = true; calendarPage = false; statsPage = false; render(); });
                     } catch (Exception error) {
-                        runOnUiThread(() -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true));
+                        runOnUiThread(() -> {
+                            progress.setVisibility(View.GONE); dialog.setCancelable(true);
+                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);
+                            if (existing != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                        });
                         showError(error);
                     }
                 });
             });
             if (existing != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(view ->
                     new AlertDialog.Builder(this).setTitle("메모 삭제").setMessage("이 메모를 삭제할까요?")
-                            .setNegativeButton("취소", null).setPositiveButton("삭제", (d, which) -> io.execute(() -> {
+                            .setNegativeButton("취소", null).setPositiveButton("삭제", (d, which) -> writes.execute(() -> {
                                 try {
                                     ApiClient.request(this, "DELETE", "/api/admin/native-memos",
                                             new JSONObject().put("id", existing.optString("id")), session());
