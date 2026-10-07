@@ -60,27 +60,15 @@ final class CalendarLedger {
         return panel;
     }
     static LinearLayout daySummary(Activity a, long paid, long received) {
-        LinearLayout panel = AdminPlanner.column(a);
-        panel.setPadding(AdminPlanner.dp(a, 16), AdminPlanner.dp(a, 14), AdminPlanner.dp(a, 16), AdminPlanner.dp(a, 14));
-        panel.setBackground(AdminPlanner.bg(a, Color.WHITE, 14));
-        panel.addView(AdminPlanner.text(a, "하루 금액 · 메모", 16, NAVY, true));
-        LinearLayout amounts = new LinearLayout(a);
-        String[] labels = {"준 금액", "받은 금액", "차액"};
-        long[] values = {paid, received, received - paid};
-        int[] colors = {CORAL, BLUE, received >= paid ? GREEN : CORAL};
-        for (int i = 0; i < 3; i++) {
-            LinearLayout column = AdminPlanner.column(a); column.setPadding(0, 0, AdminPlanner.dp(a, 4), 0);
-            column.addView(AdminPlanner.text(a, labels[i], 12, MUTED, false));
-            TextView value = AdminPlanner.text(a, won(values[i]), 16, colors[i], true);
-            value.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
-            column.addView(value, AdminPlanner.space(a, 5));
-            amounts.addView(column, new LinearLayout.LayoutParams(0, -2, 1));
-        }
-        panel.addView(amounts, AdminPlanner.space(a, 12)); return panel;
+        return summary(a, "하루 금액 · 메모", paid, received);
     }
     private static void amountRow(Activity a, LinearLayout panel, String title, long amount, int color) {
         LinearLayout row = new LinearLayout(a); row.setGravity(Gravity.CENTER_VERTICAL);
-        row.addView(AdminPlanner.text(a, title, 13, MUTED, false), new LinearLayout.LayoutParams(AdminPlanner.dp(a, 68), -2));
+        TextView label = AdminPlanner.text(a, title, 13, MUTED, false);
+        label.setSingleLine(true);
+        LinearLayout.LayoutParams caption = new LinearLayout.LayoutParams(-2, -2);
+        caption.rightMargin = AdminPlanner.dp(a, 12);
+        row.addView(label, caption);
         TextView value = AdminPlanner.text(a, won(amount), 17, color, true); value.setGravity(Gravity.END);
         row.addView(value, new LinearLayout.LayoutParams(0, -2, 1)); panel.addView(row, AdminPlanner.space(a, 8));
     }

@@ -72,15 +72,67 @@ public class CalendarLedgerTest {
                     .put(new JSONObject().put("date", "2026-10-09").put("paidAmount", 2000).put("receivedAmount", 4000)));
             var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(activity);
             View decor = activity.getWindow().getDecorView();
-            assertNotNull(PlannerInteractionTest.text(decor, "10월 금액 합계"));
-            assertNotNull(PlannerInteractionTest.text(decor, "7,000원"));
+            assertNull(PlannerInteractionTest.text(decor, "월 금액 합계"));
+            assertNull(PlannerInteractionTest.text(decor, "7,000원"));
             assertNotNull(PlannerInteractionTest.text(decor, "금액 · 메모 수정"));
             View nav = PlannerInteractionTest.description(decor, "화면 이동 메뉴"); assertNotNull(nav);
             assertNotNull(PlannerInteractionTest.description(nav, "신청서, 이동"));
             assertNotNull(PlannerInteractionTest.description(nav, "달력, 선택됨"));
             assertNotNull(PlannerInteractionTest.description(nav, "메모, 이동"));
+            assertNotNull(PlannerInteractionTest.description(nav, "통계, 이동"));
             PlannerInteractionTest.text(decor, "메뉴 접기").performClick();
             assertEquals(View.VISIBLE, nav.getVisibility());
+        }
+    }
+    @Test public void statisticsHasSeparateTotalsAndChangesMonthWithoutShowingStaleTotals() throws Exception {
+        try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get(); Calendar month = AdminPlanner.calendar(); month.set(2026, Calendar.OCTOBER, 1);
+            set(activity, "statsPage", true); set(activity, "calendarMonth", month); set(activity, "financeLoadedMonth", "2026-10");
+            set(activity, "dayFinances", new JSONArray().put(new JSONObject().put("date", "2026-10-08").put("paidAmount", 1000).put("receivedAmount", 3000))
+                    .put(new JSONObject().put("date", "2026-10-09").put("paidAmount", 2000).put("receivedAmount", 4000)));
+            var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(activity);
+            View decor = activity.getWindow().getDecorView();
+            assertNotNull(PlannerInteractionTest.text(decor, "월 금액 합계"));
+            assertNotNull(PlannerInteractionTest.text(decor, "3,000원"));
+            assertNotNull(PlannerInteractionTest.text(decor, "7,000원"));
+            assertNotNull(PlannerInteractionTest.text(decor, "4,000원"));
+            View nav = PlannerInteractionTest.description(decor, "화면 이동 메뉴");
+            assertNotNull(PlannerInteractionTest.description(nav, "통계, 선택됨"));
+            assertNull(PlannerInteractionTest.text(decor, "하루 금액 · 메모"));
+            PlannerInteractionTest.description(decor, "통계 다음 달").performClick();
+            assertNotNull(PlannerInteractionTest.text(decor, "26년 11월"));
+            assertNull(PlannerInteractionTest.text(decor, "7,000원"));
+            assertNotNull(PlannerInteractionTest.text(decor, "월 금액을 불러오는 중…"));
+        }
+    }
+    @Test public void moneyLabelsStayOnOneLineWithLargeFonts() {
+        try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get();
+            var config = new android.content.res.Configuration(activity.getResources().getConfiguration());
+            config.fontScale = 1.8f; activity.getResources().updateConfiguration(config, activity.getResources().getDisplayMetrics());
+            View summary = CalendarLedger.summary(activity, "월 금액 합계", 120000, 230000);
+            int width = AdminPlanner.dp(activity, 288);
+            summary.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.AT_MOST));
+            summary.layout(0, 0, width, summary.getMeasuredHeight());
+            for (String label : new String[]{"준 금액", "받은 금액", "차액"}) {
+                android.widget.TextView text = (android.widget.TextView) PlannerInteractionTest.text(summary, label);
+                assertEquals(1, text.getLineCount()); assertEquals(0, text.getLayout().getEllipsisCount(0));
+                assertTrue(text.getWidth() >= text.getPaint().measureText(label));
+            }
+        }
+    }
+    @Test public void calendarShowsRequestCardsBeforeDailyAmounts() throws Exception {
+        try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get(); set(activity, "calendarPage", true); set(activity, "selectedDay", "2026-10-08");
+            set(activity, "requests", new JSONArray().put(new JSONObject().put("id", "order-test").put("name", "순서 고객")
+                    .put("date", "2026-10-08").put("status", "new")));
+            var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(activity);
+            var field = MainActivity.class.getDeclaredField("list"); field.setAccessible(true);
+            android.widget.LinearLayout list = (android.widget.LinearLayout) field.get(activity);
+            View request = (View) PlannerInteractionTest.text(list, "순서 고객 님").getParent().getParent().getParent();
+            View daily = (View) PlannerInteractionTest.text(list, "하루 금액 · 메모").getParent();
+            assertTrue(list.indexOfChild(request) < list.indexOfChild(daily));
+            assertNull(PlannerInteractionTest.text(list, "월 금액 합계"));
         }
     }
     private static void set(MainActivity activity, String name, Object value) throws Exception {

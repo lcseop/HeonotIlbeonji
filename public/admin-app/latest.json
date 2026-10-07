@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 13,
-  "versionName": "1.4.0",
-  "apkPath": "/admin-app/heonot-admin-1.4.0.apk",
-  "sha256": "e0b5e2c41f775a4614aecca33334126fc8734e9f99135d17d3d25526a140fcac",
-  "size": 4346916,
-  "releaseNotes": "달력에서 하루별 준 금액·받은 금액·메모를 저장하고 월 합계와 차액을 확인할 수 있습니다. 신청서·달력·메모 메뉴를 아래에 고정해 이동을 간단하게 바꿨습니다."
+  "versionCode": 14,
+  "versionName": "1.4.1",
+  "apkPath": "/admin-app/heonot-admin-1.4.1.apk",
+  "sha256": "8929bb458cdc3f0b90bea6efae7d7eb03a3cb12fd039b2b446fae4ab85ce2c29",
+  "size": 4199934,
+  "releaseNotes": "달력은 신청서 다음에 하루 금액·메모를 표시합니다. 월 합계는 새 통계 탭으로 옮겼고 금액 제목이 줄바꿈되는 문제를 수정했습니다."
 }
