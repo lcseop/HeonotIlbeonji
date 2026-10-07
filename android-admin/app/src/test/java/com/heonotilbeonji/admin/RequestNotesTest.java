@@ -57,7 +57,7 @@ public class RequestNotesTest {
             LinearLayout shell = AdminPlanner.column(a); LinearLayout actions = AdminPlanner.column(a);
             actions.addView(new View(a), new LinearLayout.LayoutParams(-1, AdminPlanner.dp(a, 150)));
             shell.addView(actions);
-            ScrollView scroll = new ScrollView(a); LinearLayout rows = AdminPlanner.column(a);
+            CollapsingActions.ScrollSurface scroll = new CollapsingActions.ScrollSurface(a); LinearLayout rows = AdminPlanner.column(a);
             for (int i = 0; i < 22; i++) rows.addView(new View(a), new LinearLayout.LayoutParams(-1, AdminPlanner.dp(a, 100)));
             scroll.addView(rows);
             shell.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));

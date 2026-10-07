@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 9,
-  "versionName": "1.3.1",
-  "apkPath": "/admin-app/heonot-admin-1.3.1.apk",
-  "sha256": "11f416bf51a41c35c45da5c41708adf3f00c4330579d4d2af7878af0bc675c7a",
-  "size": 4261618,
-  "releaseNotes": "앱 안에서 새 버전 확인, 다운로드, 업데이트 설치를 진행할 수 있습니다."
+  "versionCode": 10,
+  "versionName": "1.3.2",
+  "apkPath": "/admin-app/heonot-admin-1.3.2.apk",
+  "sha256": "f5fee2fe21e3698a32bb7143293c8ea38d2d37f491cda536fe06fb894cda77de",
+  "size": 4196404,
+  "releaseNotes": "목록이 짧아 스크롤할 수 없어도 아래로 쓸어내리면 숨겨진 상단 메뉴가 다시 나타납니다."
 }

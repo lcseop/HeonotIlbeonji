@@ -340,7 +340,7 @@ public final class MainActivity extends Activity {
         }
         notice = label("", 13, MUTED, false);
         actions.addView(notice, margins(7, 0));
-        ScrollView scroll = new ScrollView(this);
+        CollapsingActions.ScrollSurface scroll = new CollapsingActions.ScrollSurface(this);
         scroll.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         list = new LinearLayout(this);
