@@ -87,6 +87,13 @@
         window.turnstile.remove(widgetId);
         show(result.message);
         button.textContent = '신청 전달 완료';
+        // Record a lead only after the server confirms acceptance.
+        // Tracking must never change the result shown to the customer.
+        try {
+          if (typeof window.gtag === 'function') {
+            window.gtag('event', 'conversion', { send_to: 'AW-18497578171/Ftq6CNK4l5QdELvJqvRE' });
+          }
+        } catch { /* Keep the accepted request successful if tracking is unavailable. */ }
       } else {
         settled = result.uncertain === true;
         show(result.message || fallback, true);
