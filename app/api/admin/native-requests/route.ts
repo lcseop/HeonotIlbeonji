@@ -1,4 +1,5 @@
-import { adminReady, deletePickup, listPickups, privateJson, setPickupStatus, validBearer } from '@/lib/admin';
+import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer } from '@/lib/admin';
+import { editManualPickup, parseManualPickup } from '@/lib/admin-planner';
 import { pickupDb, serverSettings } from '@/lib/admin-runtime';
 import { limitedJson } from '@/lib/pickup';
 
@@ -25,6 +26,18 @@ export async function POST(request: Request) {
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return privateJson({ message: '입력 형식이 올바르지 않습니다.' }, 400); }
+  if (data.action === 'create' || data.action === 'edit') {
+    const pickup = parseManualPickup(data);
+    if (!pickup || typeof data.requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.requestId))
+      return privateJson({ message: '이름, 전화번호와 방문 정보를 확인해 주세요.' }, 400);
+    try {
+      if (data.action === 'edit') {
+        const updated = await editManualPickup(auth.db!, data.requestId, pickup);
+        return privateJson(updated ? { id: data.requestId, updated: true } : { message: '신청서를 찾지 못했습니다.' }, updated ? 200 : 404);
+      }
+      return privateJson({ id: await savePickup(auth.db!, pickup, data.requestId), created: true });
+    } catch { return privateJson({ message: '신청서를 저장하지 못했습니다. 다시 저장해 주세요.' }, 503); }
+  }
   if (typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.id) || !['new', 'contacted', 'done'].includes(String(data.status)))
     return privateJson({ message: '신청 상태를 확인해 주세요.' }, 400);
   try {

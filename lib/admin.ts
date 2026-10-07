@@ -59,22 +59,26 @@ export async function ensureTables(db: D1Database) {
     created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
   )`).run();
   await db.prepare('CREATE INDEX IF NOT EXISTS customer_memos_phone ON customer_memos(phone)').run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS calendar_memos (
+    date TEXT PRIMARY KEY, content TEXT NOT NULL, updated_at INTEGER NOT NULL
+  )`).run();
   await db.prepare('UPDATE pickup_requests SET last_activity_at = created_at WHERE last_activity_at = 0').run();
   const cutoffDate = new Date();
   cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - 10);
   const cutoff = cutoffDate.getTime();
+  await db.prepare('DELETE FROM calendar_memos WHERE updated_at < ?').bind(cutoff).run();
   await db.prepare(`DELETE FROM customer_memos WHERE updated_at < ? AND phone NOT IN
     (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)`).bind(cutoff, cutoff).run();
   await db.prepare(`DELETE FROM pickup_requests WHERE last_activity_at < ? AND phone NOT IN
     (SELECT phone FROM customer_memos WHERE updated_at >= ?)`).bind(cutoff, cutoff).run();
 }
 
-export async function savePickup(db: D1Database, pickup: NewPickup) {
+export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string) {
   await ensureTables(db);
-  const id = crypto.randomUUID();
+  const id = requestId || crypto.randomUUID();
   await db.prepare(`INSERT INTO pickup_requests
     (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
       pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now()).run();
   return id;

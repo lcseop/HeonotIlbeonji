@@ -25,15 +25,15 @@ export async function POST(request: Request) {
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return privateJson({ message: '입력 형식이 올바르지 않습니다.' }, 400); }
-  const phone = typeof data.phone === 'string' ? data.phone.replace(/\D/g, '') : '';
+  const phone = typeof data.phone === 'string' ? data.phone.replace(/[\s()-]/g, '').replace(/^\+82/, '0') : '';
   const name = typeof data.name === 'string' ? data.name.trim() : '';
   const title = typeof data.title === 'string' ? data.title.trim() : '';
   const content = typeof data.content === 'string' ? data.content.trim() : '';
   const id = data.id;
-  if (!/^01[016789]\d{7,8}$/.test(phone) || !name || name.length > 40 || !title || title.length > 80 ||
+  if (!/^0\d{8,10}$/.test(phone) || !name || name.length > 40 || !title || title.length > 80 ||
       !content || content.length > 2000 || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(`${name}${title}${content}`) ||
       (id !== undefined && (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))))
-    return privateJson({ message: '이름, 휴대폰 번호, 제목, 내용을 확인해 주세요.' }, 400);
+    return privateJson({ message: '이름, 전화번호, 제목, 내용을 확인해 주세요.' }, 400);
   try {
     const saved = await saveMemo(auth.db!, { phone, name, title, content }, id as string | undefined);
     return privateJson(saved ? { id: saved } : { message: '메모를 찾지 못했습니다.' }, saved ? 200 : 404);

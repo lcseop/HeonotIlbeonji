@@ -5,7 +5,7 @@ import { pickupConfiguration, submitPickup } from '../lib/pickup.ts';
 
 const env = { PICKUP_SMS_ENABLED: 'true', SOLAPI_FROM: '01048808259', SOLAPI_API_KEY: 'test-key', SOLAPI_API_SECRET: 'test-secret', TURNSTILE_SITE_KEY: 'test-public', TURNSTILE_SECRET_KEY: 'test-private', SITE_ORIGIN: 'https://pickup.example' };
 const now = new Date('2026-09-29T15:30:00Z'); // September 30 in Korea.
-const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', message: '테스트 신청입니다.', consent: true, token: 'test-token' };
+const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', timeSlot: '오후', pickupMethod: '비대면 수거', message: '테스트 신청입니다.', consent: true, token: 'test-token' };
 function request(data = payload, origin = env.SITE_ORIGIN) {
   return new Request(`${env.SITE_ORIGIN}/api/pickup`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
 }

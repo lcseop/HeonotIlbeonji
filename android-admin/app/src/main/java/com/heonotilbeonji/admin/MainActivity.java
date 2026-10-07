@@ -3,13 +3,18 @@ package com.heonotilbeonji.admin;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -18,11 +23,17 @@ import android.view.WindowManager;
 import android.text.InputType;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.text.TextUtils;
+import android.transition.AutoTransition;
+import android.transition.TransitionManager;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +46,7 @@ import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -58,11 +70,60 @@ public final class MainActivity extends Activity {
     private JSONArray requests = new JSONArray();
     private JSONArray memos = new JSONArray();
     private boolean memoPage = false;
+    private boolean calendarPage = false;
+    private Calendar calendarMonth = AdminPlanner.calendar();
+    private String selectedDay = AdminPlanner.iso(AdminPlanner.calendar());
+    private JSONArray dayMemos = new JSONArray();
+    private AdminPlanner.FormEditor contactEditor;
+    private AdminPlanner.FormEditor requestEditor;
     private int requestFilter = 0;
     private int requestSort = 0;
     private int memoSort = 0;
     private String memoSearch = "";
     private String selectedMemoPhone = "";
+    private String selectedRequestId = "";
+
+    private static final int GREEN = Color.rgb(28, 125, 87);
+    private static final int BLUE = Color.rgb(52, 111, 174);
+    private static final int SURFACE = Color.rgb(244, 247, 249);
+
+    private int statusColor(String status) {
+        return "done".equals(status) ? GREEN : "contacted".equals(status) ? BLUE : CORAL;
+    }
+
+    private int statusIcon(String status) {
+        return "done".equals(status) ? R.drawable.ic_material_check_circle :
+                "contacted".equals(status) ? R.drawable.ic_material_call : R.drawable.ic_material_schedule;
+    }
+
+    private String statusLabel(String status) {
+        return "done".equals(status) ? "처리 완료" : "contacted".equals(status) ? "연락 완료" : "처리 안됨";
+    }
+
+    private Drawable iconDrawable(int resource, int color) {
+        Drawable drawable = getDrawable(resource).mutate();
+        drawable.setTint(color);
+        return drawable;
+    }
+
+    private ImageView icon(int resource, int color, String description) {
+        ImageView image = new ImageView(this);
+        image.setImageDrawable(iconDrawable(resource, color));
+        image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        if (description != null) {
+            image.setContentDescription(description);
+            if (Build.VERSION.SDK_INT >= 26) image.setTooltipText(description);
+            image.setOnLongClickListener(view -> {
+                Toast.makeText(this, description, Toast.LENGTH_SHORT).show(); return true;
+            });
+        } else image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return image;
+    }
+
+    private Drawable touchBackground(int color, int radius) {
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24, 24, 51, 78)),
+                background(color, radius), background(Color.WHITE, radius));
+    }
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -79,7 +140,23 @@ public final class MainActivity extends Activity {
             return insets;
         });
         setContentView(root);
+        if (state != null) {
+            calendarPage = state.getBoolean("calendarPage"); memoPage = state.getBoolean("memoPage");
+            selectedDay = state.getString("selectedDay", selectedDay);
+            calendarMonth.setTimeInMillis(state.getLong("calendarMonth", calendarMonth.getTimeInMillis()));
+        }
         render();
+        if (state != null && state.containsKey("requestDraft") && !session().isEmpty()) {
+            try { editRequest(new JSONObject(state.getString("requestDraft"))); contactEditor = requestEditor; }
+            catch (Exception ignored) { }
+        }
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
+        state.putString("selectedDay", selectedDay); state.putLong("calendarMonth", calendarMonth.getTimeInMillis());
+        if (requestEditor != null && requestEditor.dialog.isShowing()) state.putString("requestDraft", requestEditor.draft().toString());
     }
 
     @Override public void onResume() {
@@ -88,6 +165,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onDestroy() {
+        if (requestEditor != null && requestEditor.dialog.isShowing()) requestEditor.dialog.dismiss();
         super.onDestroy();
         io.shutdownNow();
     }
@@ -136,13 +214,27 @@ public final class MainActivity extends Activity {
         list = null;
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(18), dp(8), dp(12), dp(8));
+        header.setPadding(dp(16), 0, dp(8), 0);
         header.setBackgroundColor(NAVY);
-        TextView brand = label("①  헌옷일번지  ·  관리자", 17, Color.WHITE, true);
-        header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.heonot_logo);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setPadding(dp(5), dp(5), dp(5), dp(5));
+        logo.setBackground(background(Color.WHITE, 10));
+        logo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        header.addView(logo, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        TextView brand = label("헌옷일번지", 17, Color.WHITE, true);
+        brand.setSingleLine(true);
+        brand.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams brandParams = new LinearLayout.LayoutParams(0, -2, 1);
+        brandParams.leftMargin = dp(10);
+        header.addView(brand, brandParams);
         if (!session().isEmpty()) {
-            Button settings = button("설정", NAVY);
-            header.addView(settings, new LinearLayout.LayoutParams(dp(62), dp(38)));
+            ImageView settings = icon(R.drawable.ic_material_settings, Color.WHITE, "설정");
+            settings.setPadding(dp(12), dp(12), dp(12), dp(12));
+            settings.setBackground(touchBackground(NAVY, 24));
+            settings.setFocusable(true);
+            header.addView(settings, new LinearLayout.LayoutParams(dp(48), dp(48)));
             settings.setOnClickListener(view -> showSettings());
         }
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(55)));
@@ -195,17 +287,25 @@ public final class MainActivity extends Activity {
         actions.setPadding(dp(16), dp(10), dp(16), dp(8));
         actions.setBackgroundColor(Color.rgb(244, 247, 249));
         root.addView(actions);
-        count = label(memoPage ? "고객 메모" : "수거 신청함", 23, NAVY, true);
+        count = label(memoPage ? "고객 메모" : calendarPage ? "수거 달력" : "수거 신청함", 23, NAVY, true);
         actions.addView(count);
         LinearLayout tabs = new LinearLayout(this);
         actions.addView(tabs, margins(8, 0));
-        Button requestTab = button("신청서", memoPage ? MUTED : NAVY);
+        Button requestTab = button("신청서", !memoPage && !calendarPage ? NAVY : MUTED);
         Button memoTab = button("메모", memoPage ? NAVY : MUTED);
+        Button calendarTab = button("달력", calendarPage ? NAVY : MUTED);
         tabs.addView(requestTab, new LinearLayout.LayoutParams(0, dp(40), 1));
+        LinearLayout.LayoutParams calendarGap = new LinearLayout.LayoutParams(0, dp(40), 1); calendarGap.leftMargin = dp(7);
+        tabs.addView(calendarTab, calendarGap);
         LinearLayout.LayoutParams tabGap = new LinearLayout.LayoutParams(0, dp(40), 1); tabGap.leftMargin = dp(7);
         tabs.addView(memoTab, tabGap);
-        requestTab.setOnClickListener(view -> { memoPage = false; render(); });
-        memoTab.setOnClickListener(view -> { memoPage = true; selectedMemoPhone = ""; render(); });
+        requestTab.setOnClickListener(view -> { memoPage = false; calendarPage = false; render(); });
+        calendarTab.setOnClickListener(view -> { memoPage = false; calendarPage = true; selectedRequestId = ""; render(); });
+        memoTab.setOnClickListener(view -> { memoPage = true; calendarPage = false; selectedMemoPhone = ""; render(); });
+        if (!memoPage) {
+            Button add = AdminPlanner.button(this, "신청서 직접 작성", Color.WHITE, CORAL, R.drawable.ic_material_note_add);
+            actions.addView(add, margins(8, 0)); add.setOnClickListener(view -> newRequest());
+        }
         LinearLayout controls = new LinearLayout(this);
         actions.addView(controls, margins(7, 0));
         Button sort = button("정렬", NAVY);
@@ -245,6 +345,7 @@ public final class MainActivity extends Activity {
         list.setPadding(dp(16), 0, dp(16), dp(22));
         scroll.addView(list);
         refresh.setOnClickListener(view -> refresh());
+        if (memoPage) renderMemos(); else renderRequests();
         refresh();
     }
 
@@ -263,16 +364,19 @@ public final class MainActivity extends Activity {
 
     private void refresh() {
         if (list == null || session().isEmpty()) return;
+        final boolean loadMemos = memoPage, loadCalendar = calendarPage;
         notice.setText(memoPage ? "메모를 불러오는 중…" : "신청 내용을 불러오는 중…");
         io.execute(() -> {
             try {
-                if (memoPage) {
+                if (loadMemos) {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-memos", null, session()).getJSONArray("memos");
                     JSONArray loadedRequests = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
                     runOnUiThread(() -> { memos = loaded; requests = loadedRequests; if (memoPage) renderMemos(); });
                 } else {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
-                    runOnUiThread(() -> { requests = loaded; if (!memoPage) renderRequests(); });
+                    JSONArray notes = loadCalendar ? ApiClient.request(this, "GET", "/api/admin/native-day-memos", null, session()).getJSONArray("memos") : null;
+                    runOnUiThread(() -> { requests = loaded; if (notes != null) dayMemos = notes;
+                        if (!memoPage && calendarPage == loadCalendar) renderRequests(); });
                 }
             } catch (Exception error) {
                 runOnUiThread(() -> {
@@ -285,7 +389,7 @@ public final class MainActivity extends Activity {
     }
 
     private String displayDate(long epoch) {
-        SimpleDateFormat format = new SimpleDateFormat("M월 d일 a h:mm", Locale.KOREA);
+        SimpleDateFormat format = new SimpleDateFormat("yy년 M월 d일 a h:mm", Locale.KOREA);
         format.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
         return format.format(new Date(epoch));
     }
@@ -294,12 +398,16 @@ public final class MainActivity extends Activity {
         if (list == null) return;
         list.removeAllViews();
         int unread = 0;
-        for (int i = 0; i < requests.length(); i++) if ("new".equals(requests.optJSONObject(i).optString("status"))) unread++;
-        count.setText("수거 신청함  ·  새 신청 " + unread);
+        for (int i = 0; i < requests.length(); i++) {
+            JSONObject item = requests.optJSONObject(i);
+            if (item != null && "new".equals(item.optString("status"))) unread++;
+        }
+        count.setText(calendarPage ? "수거 달력" : "수거 신청함  ·  새 신청 " + unread);
         ArrayList<JSONObject> visible = new ArrayList<>();
         for (int i = 0; i < requests.length(); i++) {
             JSONObject item = requests.optJSONObject(i);
             if (item == null) continue;
+            if (calendarPage && !selectedDay.equals(item.optString("date"))) continue;
             if (requestFilter == 1 && !"new".equals(item.optString("status"))) continue;
             if (requestFilter == 2 && !"contacted".equals(item.optString("status"))) continue;
             if (requestFilter == 3 && !"done".equals(item.optString("status"))) continue;
@@ -313,21 +421,169 @@ public final class MainActivity extends Activity {
             return requestSort == 1 ? Long.compare(a.optLong("created_at"), b.optLong("created_at")) :
                     Long.compare(b.optLong("created_at"), a.optLong("created_at"));
         });
-        notice.setText("표시 " + visible.size() + "건 · 신청서를 누르면 상세 내용을 볼 수 있습니다.");
-        if (visible.isEmpty()) { emptyCard("해당하는 신청서가 없습니다."); return; }
+        notice.setText(calendarPage ? "날짜를 누르면 신청서와 메모를 볼 수 있어요" : "표시 " + visible.size() + "건 · 누르면 요약, 상세 보기로 전체 확인");
+        if (calendarPage) {
+            list.addView(AdminPlanner.month(this, calendarMonth, selectedDay, requests, requestFilter, dayMemos,
+                    day -> { selectedDay = day; selectedRequestId = ""; renderRequests(); },
+                    offset -> { calendarMonth.set(Calendar.DAY_OF_MONTH, 1); calendarMonth.add(Calendar.MONTH, offset);
+                        selectedDay = AdminPlanner.iso(calendarMonth); selectedRequestId = ""; renderRequests(); }), margins(6, 0));
+            LinearLayout dayHeader = new LinearLayout(this); dayHeader.setGravity(Gravity.CENTER_VERTICAL);
+            TextView dayTitle = label(RequestSummary.date(selectedDay) + " · " + visible.size() + "건", 16, NAVY, true);
+            dayHeader.addView(dayTitle, new LinearLayout.LayoutParams(0, -2, 1));
+            Button today = AdminPlanner.button(this, "오늘", BLUE, Color.WHITE, 0);
+            today.setOnClickListener(v -> { calendarMonth = AdminPlanner.calendar(); selectedDay = AdminPlanner.iso(calendarMonth); renderRequests(); });
+            dayHeader.addView(today, new LinearLayout.LayoutParams(dp(58), dp(48)));
+            list.addView(dayHeader, margins(12, 4));
+        }
+        if (visible.isEmpty()) emptyCard("해당하는 신청서가 없습니다.");
         for (JSONObject item : visible) {
+            boolean expanded = selectedRequestId.equals(item.optString("id"));
+            String state = item.optString("status");
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(18), dp(17), dp(18), dp(17));
-            card.setBackground(background(Color.WHITE, 17));
-            String state = item.optString("status");
-            String stateText = "new".equals(state) ? "새 신청" : "contacted".equals(state) ? "연락 완료" : "처리 완료";
-            card.addView(label(item.optString("name") + " 님   ·   " + stateText, 18, NAVY, true));
-            card.addView(label(displayDate(item.optLong("created_at")) + "   ·   " + item.optString("amount") +
-                    "   ·   " + item.optString("pickupMethod", "미기재"), 13, MUTED, false), margins(8, 0));
-            card.setOnClickListener(view -> showDetail(item));
-            list.addView(card, margins(10, 0));
+            GradientDrawable outline = background(expanded ? Color.rgb(238, 245, 251) : Color.WHITE, 14);
+            if (expanded) outline.setStroke(dp(1), Color.rgb(187, 208, 229));
+            card.setBackground(outline);
+
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setMinimumHeight(dp(64));
+            row.setPadding(dp(12), dp(8), dp(4), dp(8));
+            row.setBackground(touchBackground(Color.TRANSPARENT, 14));
+            ImageView stateIcon = icon(statusIcon(state), statusColor(state), statusLabel(state));
+            stateIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
+            stateIcon.setBackground(background(Color.WHITE, 12));
+            row.addView(stateIcon, new LinearLayout.LayoutParams(dp(36), dp(36)));
+            LinearLayout text = new LinearLayout(this);
+            text.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, -2, 1);
+            textParams.leftMargin = dp(12);
+            TextView name = label(item.optString("name") + " 님", expanded ? 18 : 16, NAVY, true);
+            name.setSingleLine(true);
+            name.setEllipsize(TextUtils.TruncateAt.END);
+            text.addView(name);
+            text.addView(label("희망 " + RequestSummary.date(item.optString("date")), 13, MUTED, false), margins(3, 0));
+            row.addView(text, textParams);
+            ImageView arrow = icon(R.drawable.ic_material_expand_more, MUTED, expanded ? "요약 접기" : null);
+            arrow.setRotation(expanded ? 180 : 0);
+            arrow.setPadding(dp(13), dp(13), dp(13), dp(13));
+            row.addView(arrow, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            row.setOnClickListener(view -> {
+                if (expanded) showDetail(item);
+                else {
+                    selectedRequestId = item.optString("id");
+                    TransitionManager.beginDelayedTransition(list, new AutoTransition().setDuration(160));
+                    renderRequests();
+                }
+            });
+            if (expanded) arrow.setOnClickListener(view -> {
+                selectedRequestId = "";
+                TransitionManager.beginDelayedTransition(list, new AutoTransition().setDuration(160));
+                renderRequests();
+            });
+            card.addView(row);
+            if (expanded) {
+                LinearLayout summary = new LinearLayout(this);
+                summary.setGravity(Gravity.CENTER_VERTICAL);
+                summary.setPadding(dp(16), dp(2), dp(16), dp(12));
+                ImageView location = icon(R.drawable.ic_material_location_on, MUTED, null);
+                summary.addView(location, new LinearLayout.LayoutParams(dp(18), dp(18)));
+                TextView address = label(RequestSummary.address(item.optString("address")), 14, NAVY, false);
+                address.setMaxLines(2);
+                address.setEllipsize(TextUtils.TruncateAt.END);
+                LinearLayout.LayoutParams addressParams = new LinearLayout.LayoutParams(0, -2, 1);
+                addressParams.leftMargin = dp(6);
+                summary.addView(address, addressParams);
+                String method = item.optString("pickupMethod");
+                if (!method.isEmpty()) {
+                    boolean unattended = method.contains("비대면");
+                    ImageView methodIcon = icon(unattended ? R.drawable.ic_material_person_off : R.drawable.ic_material_person,
+                            unattended ? BLUE : MUTED, method);
+                    methodIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
+                    methodIcon.setBackground(background(Color.WHITE, 10));
+                    LinearLayout.LayoutParams methodParams = new LinearLayout.LayoutParams(dp(36), dp(36));
+                    methodParams.leftMargin = dp(10);
+                    summary.addView(methodIcon, methodParams);
+                }
+                card.addView(summary);
+                TextView details = label("신청 상세 보기", 13, BLUE, true);
+                details.setGravity(Gravity.CENTER);
+                details.setCompoundDrawablesWithIntrinsicBounds(null, null,
+                        iconDrawable(R.drawable.ic_material_chevron_right, BLUE), null);
+                details.setPadding(dp(16), 0, dp(12), 0);
+                details.setBackground(touchBackground(Color.WHITE, 12));
+                LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, dp(48));
+                detailParams.setMargins(dp(12), 0, dp(12), dp(12));
+                card.addView(details, detailParams);
+                details.setOnClickListener(view -> showDetail(item));
+            }
+            list.addView(card, margins(6, 0));
         }
+        if (calendarPage) renderDayMemo();
+    }
+
+    private void newRequest() {
+        editRequest(null);
+    }
+    private void editRequest(JSONObject existing) {
+        requestEditor = new AdminPlanner.FormEditor(this, calendarPage ? selectedDay : "", existing, editor -> {
+            contactEditor = editor;
+            try { startActivityForResult(new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI), 201); }
+            catch (ActivityNotFoundException e) { Toast.makeText(this, "연락처 앱을 찾지 못했습니다. 번호를 직접 입력해 주세요.", Toast.LENGTH_LONG).show(); }
+        }, phone -> {
+            JSONObject newest = null;
+            for (int i = 0; i < requests.length(); i++) {
+                JSONObject item = requests.optJSONObject(i);
+                if (item != null && phone.equals(AdminPlanner.normalizePhone(item.optString("phone"))) &&
+                        (newest == null || item.optLong("created_at") > newest.optLong("created_at"))) newest = item;
+            }
+            return newest;
+        }, (data, result) -> io.execute(() -> {
+            try {
+                ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
+                runOnUiThread(() -> { result.accept(null); selectedRequestId = data.optString("requestId");
+                    if ("create".equals(data.optString("action"))) requestFilter = 0;
+                    if (calendarPage && !data.optString("date").isEmpty()) {
+                        selectedDay = data.optString("date"); String[] parts = selectedDay.split("-");
+                        calendarMonth.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1);
+                    } else if (calendarPage) { calendarPage = false; render(); }
+                    refresh();
+                    Toast.makeText(this, "신청서를 저장했습니다.", Toast.LENGTH_SHORT).show(); });
+            } catch (Exception e) { runOnUiThread(() -> result.accept(e.getMessage())); }
+        }));
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != 201 || resultCode != RESULT_OK || data == null || data.getData() == null ||
+                contactEditor == null || !contactEditor.dialog.isShowing()) return;
+        try (Cursor cursor = getContentResolver().query(data.getData(),
+                new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) contactEditor.contact(cursor.getString(0), cursor.getString(1));
+        } catch (Exception e) { Toast.makeText(this, "선택한 연락처를 가져오지 못했습니다. 직접 입력해 주세요.", Toast.LENGTH_LONG).show(); }
+        contactEditor = null;
+    }
+
+    private void renderDayMemo() {
+        String content = "";
+        for (int i = 0; i < dayMemos.length(); i++) {
+            JSONObject note = dayMemos.optJSONObject(i);
+            if (note != null && selectedDay.equals(note.optString("date"))) content = note.optString("content");
+        }
+        final String existing = content;
+        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(background(Color.WHITE, 14));
+        card.addView(label("날짜 메모", 16, NAVY, true));
+        TextView body = label(content.isEmpty() ? "동선·휴무·재연락할 내용을 남겨 보세요." : content, 14, MUTED, false);
+        body.setLineSpacing(dp(4), 1); card.addView(body, margins(8, 12));
+        Button edit = AdminPlanner.button(this, content.isEmpty() ? "날짜 메모 작성" : "날짜 메모 수정", BLUE, SURFACE, R.drawable.ic_material_note_add);
+        card.addView(edit); edit.setOnClickListener(v -> AdminPlanner.editNote(this, selectedDay, existing, (day, note, result) -> io.execute(() -> {
+            try {
+                ApiClient.request(this, "POST", "/api/admin/native-day-memos", new JSONObject().put("date", day).put("content", note), session());
+                runOnUiThread(() -> { result.accept(null); refresh(); });
+            } catch (Exception e) { runOnUiThread(() -> result.accept(e.getMessage())); }
+        })));
+        list.addView(card, margins(14, 8));
     }
 
     private void emptyCard(String message) {
@@ -472,32 +728,72 @@ public final class MainActivity extends Activity {
     private void showDetail(JSONObject item) {
         String name = item.optString("name");
         String phone = item.optString("phone");
+        String status = item.optString("status");
+        LinearLayout shell = new LinearLayout(this);
+        shell.setOrientation(LinearLayout.VERTICAL);
+        shell.setBackground(background(SURFACE, 22));
+        shell.setClipToOutline(true);
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(20), dp(12), dp(8), dp(12));
+        header.setBackgroundColor(Color.WHITE);
+        LinearLayout heading = new LinearLayout(this);
+        heading.setOrientation(LinearLayout.VERTICAL);
+        TextView customer = label(name + " 님의 신청", 21, NAVY, true);
+        customer.setMaxLines(2);
+        heading.addView(customer);
+        TextView state = label(statusLabel(status) + "  ·  " + displayDate(item.optLong("created_at")) + " 접수", 12, statusColor(status), false);
+        heading.addView(state, margins(5, 0));
+        header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
+        ImageView edit = icon(R.drawable.ic_material_edit, BLUE, "신청서 수정");
+        edit.setPadding(dp(12), dp(12), dp(12), dp(12)); edit.setBackground(touchBackground(Color.WHITE, 24));
+        header.addView(edit, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        ImageView close = icon(R.drawable.ic_material_close, MUTED, "신청서 닫기");
+        close.setPadding(dp(13), dp(13), dp(13), dp(13));
+        close.setBackground(touchBackground(Color.WHITE, 24));
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        shell.addView(header);
+
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(22), dp(12), dp(22), dp(12));
-        detailLine(body, "전화번호", phone);
-        detailLine(body, "수거 주소", item.optString("address"));
-        detailLine(body, "예상 수거량", item.optString("amount"));
-        detailLine(body, "희망 날짜", item.optString("date"));
-        detailLine(body, "희망 시간대", item.optString("timeSlot", "미기재"));
-        detailLine(body, "수거 방식", item.optString("pickupMethod", "미기재"));
-        detailLine(body, "문의 내용", item.optString("message", "없음"));
-        Button dial = button("전화 앱에서 번호 열기", CORAL);
-        body.addView(dial, margins(20, 8));
-        Button contact = button("연락처에 추가", NAVY);
-        body.addView(contact, margins(0, 8));
-        Button contacted = button("연락 완료로 표시", MUTED);
-        body.addView(contacted, margins(0, 6));
-        Button done = button("처리 완료로 표시", NAVY);
-        body.addView(done, margins(0, 6));
-        Button addMemo = button("이 번호로 메모 작성", NAVY);
-        body.addView(addMemo, margins(0, 6));
-        Button delete = button("신청서 삭제", CORAL);
-        body.addView(delete, margins(0, 6));
+        body.setPadding(dp(16), dp(4), dp(16), dp(16));
+        LinearLayout schedule = detailSection(body, "방문 일정");
+        detailLine(schedule, "희망 날짜", RequestSummary.date(item.optString("date")));
+        detailLine(schedule, "희망 시간대", item.optString("timeSlot", "미기재"));
+        detailLine(schedule, "수거 방식", item.optString("pickupMethod", "미기재"));
+        LinearLayout address = detailSection(body, "연락처 · 수거 장소");
+        detailLine(address, "전화번호", phone);
+        detailLine(address, "수거 주소", item.optString("address"));
+        LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
+        detailLine(belongings, "예상 수거량", item.optString("amount"));
+        detailLine(belongings, "문의 내용", item.optString("message", "없음"));
         ScrollView detailScroll = new ScrollView(this);
+        detailScroll.setFillViewport(false);
         detailScroll.addView(body);
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(name + " 님의 신청").setView(detailScroll)
-                .setNegativeButton("닫기", null).create();
+        shell.addView(detailScroll, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.VERTICAL);
+        actions.setPadding(dp(12), dp(10), dp(12), dp(12));
+        actions.setBackgroundColor(Color.WHITE);
+        LinearLayout contactActions = new LinearLayout(this);
+        LinearLayout statusActions = new LinearLayout(this);
+        actions.addView(contactActions);
+        actions.addView(statusActions, margins(8, 0));
+        LinearLayout dial = detailAction(contactActions, "전화", R.drawable.ic_material_call, Color.WHITE, CORAL);
+        LinearLayout contact = detailAction(contactActions, "연락처 추가", R.drawable.ic_material_person_add, NAVY, SURFACE);
+        LinearLayout addMemo = detailAction(contactActions, "메모 작성", R.drawable.ic_material_note_add, NAVY, SURFACE);
+        LinearLayout contacted = detailAction(statusActions, "연락 완료", R.drawable.ic_material_call, BLUE,
+                "contacted".equals(status) ? Color.rgb(221, 235, 250) : SURFACE);
+        LinearLayout done = detailAction(statusActions, "처리 완료", R.drawable.ic_material_check_circle, GREEN,
+                "done".equals(status) ? Color.rgb(221, 243, 231) : SURFACE);
+        LinearLayout delete = detailAction(statusActions, "삭제", R.drawable.ic_material_delete, CORAL, Color.rgb(255, 240, 237));
+        shell.addView(actions);
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(shell, new ViewGroup.LayoutParams(-1, -1));
+        close.setOnClickListener(view -> dialog.dismiss());
+        edit.setOnClickListener(view -> { dialog.dismiss(); editRequest(item); });
         dial.setOnClickListener(view -> {
             Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone));
             try { startActivity(intent); }
@@ -528,6 +824,54 @@ public final class MainActivity extends Activity {
                     });
                 }).show());
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            int height = Math.min(dp(760), (int) (getResources().getDisplayMetrics().heightPixels * .88f));
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - dp(24), height);
+        }
+    }
+
+    private LinearLayout detailSection(LinearLayout parent, String title) {
+        LinearLayout section = new LinearLayout(this);
+        section.setOrientation(LinearLayout.VERTICAL);
+        section.setPadding(dp(16), dp(15), dp(16), dp(16));
+        section.setBackground(background(Color.WHITE, 14));
+        section.addView(label(title, 15, NAVY, true), margins(0, 3));
+        parent.addView(section, margins(12, 0));
+        return section;
+    }
+
+    private LinearLayout detailAction(LinearLayout parent, String title, int resource, int color, int fill) {
+        LinearLayout action = new LinearLayout(this);
+        action.setOrientation(LinearLayout.VERTICAL);
+        action.setGravity(Gravity.CENTER);
+        action.setPadding(dp(4), dp(10), dp(4), dp(10));
+        action.setMinimumHeight(dp(64));
+        action.setBackground(touchBackground(fill, 12));
+        action.setFocusable(true);
+        action.setContentDescription(title);
+        // Expose the complete action as a single button to accessibility services.
+        action.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName(Button.class.getName());
+            }
+        });
+        action.addView(icon(resource, color, null), new LinearLayout.LayoutParams(dp(30), dp(30)));
+        TextView caption = label(title, 11, color, true);
+        caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        caption.setGravity(Gravity.CENTER);
+        caption.setIncludeFontPadding(false);
+        caption.setMinLines(2);
+        caption.setMaxLines(2);
+        caption.setEllipsize(TextUtils.TruncateAt.END);
+        action.addView(caption, margins(6, 0));
+        // Reserve identical two-line label space, including larger system font sizes.
+        int actionHeight = Math.max(dp(84), dp(56) + caption.getLineHeight() * 2);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, actionHeight, 1);
+        if (parent.getChildCount() > 0) params.leftMargin = dp(6);
+        parent.addView(action, params);
+        return action;
     }
 
     private void updateRequest(String id, String status) {
@@ -565,7 +909,7 @@ public final class MainActivity extends Activity {
         fields.setOrientation(LinearLayout.VERTICAL);
         fields.setPadding(dp(20), dp(8), dp(20), dp(12));
         EditText name = memoField(fields, "고객 이름", existing == null ? prefillName : existing.optString("name"), false);
-        EditText phone = memoField(fields, "휴대폰 번호", existing == null ? prefillPhone : existing.optString("phone"), false);
+        EditText phone = memoField(fields, "전화번호", existing == null ? prefillPhone : existing.optString("phone"), false);
         phone.setInputType(InputType.TYPE_CLASS_PHONE);
         EditText title = memoField(fields, "메모 제목", existing == null ? "" : existing.optString("title"), false);
         EditText content = memoField(fields, "메모 내용", existing == null ? "" : existing.optString("content"), true);
@@ -578,11 +922,11 @@ public final class MainActivity extends Activity {
         dialog.setOnShowListener(ignored -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
                 String n = name.getText().toString().trim();
-                String p = phone.getText().toString().replaceAll("\\D", "");
+                String p = AdminPlanner.normalizePhone(phone.getText().toString());
                 String t = title.getText().toString().trim();
                 String c = content.getText().toString().trim();
-                if (n.isEmpty() || !p.matches("01[016789]\\d{7,8}") || t.isEmpty() || c.isEmpty()) {
-                    Toast.makeText(this, "이름, 휴대폰 번호, 제목, 내용을 입력해 주세요.", Toast.LENGTH_LONG).show(); return;
+                if (n.isEmpty() || !p.matches("0\\d{8,10}") || t.isEmpty() || c.isEmpty()) {
+                    Toast.makeText(this, "이름, 전화번호, 제목, 내용을 입력해 주세요.", Toast.LENGTH_LONG).show(); return;
                 }
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
                 io.execute(() -> {
@@ -590,7 +934,7 @@ public final class MainActivity extends Activity {
                         JSONObject data = new JSONObject().put("name", n).put("phone", p).put("title", t).put("content", c);
                         if (existing != null) data.put("id", existing.optString("id"));
                         ApiClient.request(this, "POST", "/api/admin/native-memos", data, session());
-                        runOnUiThread(() -> { dialog.dismiss(); memoPage = true; selectedMemoPhone = p; render(); });
+                        runOnUiThread(() -> { dialog.dismiss(); memoPage = true; calendarPage = false; selectedMemoPhone = p; render(); });
                     } catch (Exception error) {
                         runOnUiThread(() -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true));
                         showError(error);
@@ -611,8 +955,11 @@ public final class MainActivity extends Activity {
     }
 
     private void detailLine(LinearLayout parent, String title, String value) {
-        parent.addView(label(title, 12, MUTED, true), margins(11, 3));
-        parent.addView(label(value.isEmpty() ? "없음" : value, 15, NAVY, false));
+        parent.addView(label(title, 12, MUTED, false), margins(12, 4));
+        TextView content = label(value.isEmpty() ? "없음" : value, 16, NAVY, false);
+        content.setLineSpacing(dp(4), 1);
+        content.setTextIsSelectable(true);
+        parent.addView(content);
     }
 
     private void editServerUrl() {

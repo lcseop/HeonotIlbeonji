@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:label="헌옷일번지 신청함"
+        android:label="헌옷일번지"
         android:icon="@drawable/ic_app"
         android:allowBackup="false"
         android:usesCleartextTraffic="${cleartextTraffic}"

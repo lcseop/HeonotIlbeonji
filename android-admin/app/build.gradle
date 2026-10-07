@@ -17,8 +17,8 @@ android {
         applicationId 'com.heonotilbeonji.admin'
         minSdk 23
         targetSdk 36
-        versionCode 1
-        versionName '1.0'
+        versionCode 7
+        versionName '1.2.0'
         buildConfigField 'String', 'API_BASE_URL', '"' + apiBaseUrl + '"'
     }
 
@@ -40,9 +40,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED'
+        }
+    }
 }
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
     implementation platform('com.google.firebase:firebase-bom:34.19.0')
     implementation 'com.google.firebase:firebase-messaging'
 }
