@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 10,
-  "versionName": "1.3.2",
-  "apkPath": "/admin-app/heonot-admin-1.3.2.apk",
-  "sha256": "f5fee2fe21e3698a32bb7143293c8ea38d2d37f491cda536fe06fb894cda77de",
-  "size": 4196404,
-  "releaseNotes": "목록이 짧아 스크롤할 수 없어도 아래로 쓸어내리면 숨겨진 상단 메뉴가 다시 나타납니다."
+  "versionCode": 11,
+  "versionName": "1.3.3",
+  "apkPath": "/admin-app/heonot-admin-1.3.3.apk",
+  "sha256": "493be1da413c81d03f87c5004d325a403974abf2012b9c2a09f91d170aed2490",
+  "size": 4196398,
+  "releaseNotes": "요약 보기에서 전체 목록을 다시 그리던 전환 효과를 제거하고 누른 신청서만 펼치도록 수정했습니다."
 }

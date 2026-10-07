@@ -24,8 +24,6 @@ import android.text.InputType;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.TextUtils;
-import android.transition.AutoTransition;
-import android.transition.TransitionManager;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -81,6 +79,7 @@ public final class MainActivity extends Activity {
     private int memoSort = 0;
     private String memoSearch = "";
     private String selectedRequestId = "";
+    private Runnable collapseRequestSummary;
     private AppUpdater updater;
 
     private static final int GREEN = Color.rgb(28, 125, 87);
@@ -401,6 +400,7 @@ public final class MainActivity extends Activity {
 
     private void renderRequests() {
         if (list == null) return;
+        collapseRequestSummary = null;
         list.removeAllViews();
         int unread = 0;
         for (int i = 0; i < requests.length(); i++) {
@@ -476,58 +476,74 @@ public final class MainActivity extends Activity {
             arrow.setRotation(expanded ? 180 : 0);
             arrow.setPadding(dp(13), dp(13), dp(13), dp(13));
             row.addView(arrow, new LinearLayout.LayoutParams(dp(48), dp(48)));
-            row.setOnClickListener(view -> {
-                if (expanded) showDetail(item);
-                else {
-                    selectedRequestId = item.optString("id");
-                    TransitionManager.beginDelayedTransition(list, new AutoTransition().setDuration(160));
-                    renderRequests();
-                }
-            });
-            if (expanded) arrow.setOnClickListener(view -> {
-                selectedRequestId = "";
-                TransitionManager.beginDelayedTransition(list, new AutoTransition().setDuration(160));
-                renderRequests();
-            });
             card.addView(row);
-            if (expanded) {
-                LinearLayout summary = new LinearLayout(this);
-                summary.setGravity(Gravity.CENTER_VERTICAL);
-                summary.setPadding(dp(16), dp(2), dp(16), dp(12));
-                ImageView location = icon(R.drawable.ic_material_location_on, MUTED, null);
-                summary.addView(location, new LinearLayout.LayoutParams(dp(18), dp(18)));
-                TextView address = label(RequestSummary.address(item.optString("address")), 14, NAVY, false);
-                address.setMaxLines(2);
-                address.setEllipsize(TextUtils.TruncateAt.END);
-                LinearLayout.LayoutParams addressParams = new LinearLayout.LayoutParams(0, -2, 1);
-                addressParams.leftMargin = dp(6);
-                summary.addView(address, addressParams);
-                String method = item.optString("pickupMethod");
-                if (!method.isEmpty()) {
-                    boolean unattended = method.contains("비대면");
-                    ImageView methodIcon = icon(unattended ? R.drawable.ic_material_person_off : R.drawable.ic_material_person,
-                            unattended ? BLUE : MUTED, method);
-                    methodIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
-                    methodIcon.setBackground(background(Color.WHITE, 10));
-                    LinearLayout.LayoutParams methodParams = new LinearLayout.LayoutParams(dp(36), dp(36));
-                    methodParams.leftMargin = dp(10);
-                    summary.addView(methodIcon, methodParams);
-                }
-                card.addView(summary);
-                TextView details = label("신청 상세 보기", 13, BLUE, true);
-                details.setGravity(Gravity.CENTER);
-                details.setCompoundDrawablesWithIntrinsicBounds(null, null,
-                        iconDrawable(R.drawable.ic_material_chevron_right, BLUE), null);
-                details.setPadding(dp(16), 0, dp(12), 0);
-                details.setBackground(touchBackground(Color.WHITE, 12));
-                LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, dp(48));
-                detailParams.setMargins(dp(12), 0, dp(12), dp(12));
-                card.addView(details, detailParams);
-                details.setOnClickListener(view -> showDetail(item));
+            LinearLayout summary = new LinearLayout(this);
+            summary.setGravity(Gravity.CENTER_VERTICAL);
+            summary.setPadding(dp(16), dp(2), dp(16), dp(12));
+            ImageView location = icon(R.drawable.ic_material_location_on, MUTED, null);
+            summary.addView(location, new LinearLayout.LayoutParams(dp(18), dp(18)));
+            TextView address = label(RequestSummary.address(item.optString("address")), 14, NAVY, false);
+            address.setMaxLines(2);
+            address.setEllipsize(TextUtils.TruncateAt.END);
+            LinearLayout.LayoutParams addressParams = new LinearLayout.LayoutParams(0, -2, 1);
+            addressParams.leftMargin = dp(6);
+            summary.addView(address, addressParams);
+            String method = item.optString("pickupMethod");
+            if (!method.isEmpty()) {
+                boolean unattended = method.contains("비대면");
+                ImageView methodIcon = icon(unattended ? R.drawable.ic_material_person_off : R.drawable.ic_material_person,
+                        unattended ? BLUE : MUTED, method);
+                methodIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
+                methodIcon.setBackground(background(Color.WHITE, 10));
+                LinearLayout.LayoutParams methodParams = new LinearLayout.LayoutParams(dp(36), dp(36));
+                methodParams.leftMargin = dp(10);
+                summary.addView(methodIcon, methodParams);
             }
+            card.addView(summary);
+            TextView details = label("신청 상세 보기", 13, BLUE, true);
+            details.setGravity(Gravity.CENTER);
+            details.setCompoundDrawablesWithIntrinsicBounds(null, null,
+                    iconDrawable(R.drawable.ic_material_chevron_right, BLUE), null);
+            details.setPadding(dp(16), 0, dp(12), 0);
+            details.setBackground(touchBackground(Color.WHITE, 12));
+            LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, dp(48));
+            detailParams.setMargins(dp(12), 0, dp(12), dp(12));
+            card.addView(details, detailParams);
+            details.setOnClickListener(view -> showDetail(item));
+            Runnable collapse = () -> setRequestSummary(card, name, arrow, summary, details, false);
+            Runnable expand = () -> {
+                if (collapseRequestSummary != null) collapseRequestSummary.run();
+                selectedRequestId = item.optString("id");
+                setRequestSummary(card, name, arrow, summary, details, true);
+                collapseRequestSummary = collapse;
+            };
+            row.setOnClickListener(view -> {
+                if (selectedRequestId.equals(item.optString("id"))) showDetail(item);
+                else expand.run();
+            });
+            arrow.setOnClickListener(view -> {
+                if (selectedRequestId.equals(item.optString("id"))) {
+                    collapse.run(); selectedRequestId = ""; collapseRequestSummary = null;
+                } else expand.run();
+            });
+            setRequestSummary(card, name, arrow, summary, details, expanded);
+            if (expanded) collapseRequestSummary = collapse;
             list.addView(card, margins(6, 0));
         }
         if (calendarPage) renderDayMemo();
+    }
+
+    // Keep the existing list and calendar attached; only change the selected card.
+    private void setRequestSummary(LinearLayout card, TextView name, ImageView arrow,
+                                   LinearLayout summary, TextView details, boolean expanded) {
+        summary.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        details.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        name.setTextSize(expanded ? 18 : 16);
+        arrow.setRotation(expanded ? 180 : 0);
+        arrow.setContentDescription(expanded ? "요약 접기" : "요약 보기");
+        GradientDrawable outline = background(expanded ? Color.rgb(238, 245, 251) : Color.WHITE, 14);
+        if (expanded) outline.setStroke(dp(1), Color.rgb(187, 208, 229));
+        card.setBackground(outline);
     }
 
     private void newRequest() {

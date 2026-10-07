@@ -22,6 +22,42 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {28, 35})
 public class RequestInteractionTest {
+    @Test @Config(qualifiers = "w960dp-h1280dp-mdpi")
+    public void tabletSummaryKeepsOtherCardsAndCalendarAttached() throws Exception {
+        try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get();
+            call(activity, "showInbox");
+            String day = AdminPlanner.iso(AdminPlanner.calendar());
+            JSONArray items = new JSONArray();
+            for (int i = 0; i < 2; i++) items.put(new JSONObject().put("id", "tablet-" + i)
+                    .put("name", "고객" + i).put("date", day).put("status", "new")
+                    .put("address", "경기도 김포시 전호로56번길 30").put("created_at", 2 - i));
+            field("requests").set(activity, items);
+            for (boolean calendar : new boolean[]{false, true}) {
+                field("calendarPage").set(activity, calendar);
+                call(activity, "renderRequests");
+                LinearLayout list = (LinearLayout) field("list").get(activity);
+                View[] original = new View[list.getChildCount()];
+                for (int i = 0; i < original.length; i++) original[i] = list.getChildAt(i);
+                int offset = calendar ? 2 : 0;
+                ViewGroup first = (ViewGroup) original[offset], second = (ViewGroup) original[offset + 1];
+                for (int repeat = 0; repeat < 4; repeat++) {
+                    first.getChildAt(0).performClick();
+                    assertEquals(View.VISIBLE, first.getChildAt(1).getVisibility());
+                    second.getChildAt(0).performClick();
+                    assertEquals(View.GONE, first.getChildAt(1).getVisibility());
+                    assertEquals(View.VISIBLE, second.getChildAt(1).getVisibility());
+                    assertNotNull(PlannerInteractionTest.description(second, "요약 접기"));
+                    PlannerInteractionTest.description(second, "요약 접기").performClick();
+                    assertEquals(View.GONE, second.getChildAt(1).getVisibility());
+                    assertEquals("", field("selectedRequestId").get(activity));
+                    assertEquals(original.length, list.getChildCount());
+                    for (int i = 0; i < original.length; i++) assertSame(original[i], list.getChildAt(i));
+                    assertNull(list.getLayoutTransition());
+                }
+            }
+        }
+    }
     @Test public void allRequestIconsCanBeLoaded() {
         try (var controller = Robolectric.buildActivity(MainActivity.class).setup()) {
             int[] icons = {R.drawable.ic_material_call, R.drawable.ic_material_check_circle,
