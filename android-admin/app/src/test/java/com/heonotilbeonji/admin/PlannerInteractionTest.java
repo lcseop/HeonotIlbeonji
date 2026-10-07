@@ -25,7 +25,7 @@ public class PlannerInteractionTest {
                     .put(new JSONObject().put("date", "2028-02-29").put("status", "done"));
             JSONArray notes = new JSONArray().put(new JSONObject().put("date", "2028-02-28").put("content", "동선 메모"));
             AtomicReference<String> selected = new AtomicReference<>();
-            View panel = AdminPlanner.month(a, month, "2028-02-01", requests, 0, notes, selected::set, n -> {});
+            View panel = AdminPlanner.month(a, month, "2028-02-01", requests, RequestListControls.ALL, notes, selected::set, n -> {});
             assertNotNull(text(panel, "2건")); assertNotNull(text(panel, "메모"));
             View day = description(panel, "28년 2월 29일 (화), 신청 2건"); assertNotNull(day);
             day.performClick(); assertEquals("2028-02-29", selected.get());

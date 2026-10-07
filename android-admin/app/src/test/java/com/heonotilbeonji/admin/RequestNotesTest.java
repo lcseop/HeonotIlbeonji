@@ -95,7 +95,7 @@ public class RequestNotesTest {
             Calendar month = AdminPlanner.calendar(); month.set(2026, Calendar.OCTOBER, 1);
             JSONArray requests = new JSONArray().put(new JSONObject().put("date", "2026-10-08").put("status", "new"))
                     .put(new JSONObject().put("date", "2026-10-08").put("status", "new"));
-            View panel = AdminPlanner.month(a, month, "2026-10-08", requests, 0, new JSONArray(), day -> {}, move -> {});
+            View panel = AdminPlanner.month(a, month, "2026-10-08", requests, RequestListControls.ALL, new JSONArray(), day -> {}, move -> {});
             int width = AdminPlanner.dp(a, 288);
             panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.AT_MOST));
             panel.layout(0, 0, width, panel.getMeasuredHeight());

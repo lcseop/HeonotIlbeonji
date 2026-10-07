@@ -138,9 +138,7 @@ final class AdminPlanner {
         return panel;
     }
     static boolean matchesFilter(JSONObject item, int filter) {
-        return filter == 0 || (filter == 1 && "new".equals(item.optString("status"))) ||
-                (filter == 2 && "contacted".equals(item.optString("status"))) ||
-                (filter == 3 && "done".equals(item.optString("status")));
+        return RequestListControls.matches(item, filter);
     }
 
     interface SaveRequest { void save(JSONObject data, Consumer<String> result); }

@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 14,
-  "versionName": "1.4.1",
-  "apkPath": "/admin-app/heonot-admin-1.4.1.apk",
-  "sha256": "8929bb458cdc3f0b90bea6efae7d7eb03a3cb12fd039b2b446fae4ab85ce2c29",
-  "size": 4199934,
-  "releaseNotes": "달력은 신청서 다음에 하루 금액·메모를 표시합니다. 월 합계는 새 통계 탭으로 옮겼고 금액 제목이 줄바꿈되는 문제를 수정했습니다."
+  "versionCode": 15,
+  "versionName": "1.4.2",
+  "apkPath": "/admin-app/heonot-admin-1.4.2.apk",
+  "sha256": "b83a840df34a23896a256b67e585c7272016d152719000fd3394d0f53e2efbd3",
+  "size": 4276405,
+  "releaseNotes": "상태 필터 다중 선택, 화면에서 바로 정렬·필터 변경, 새 신청·연락 완료만 희망 날짜순으로 보는 미완료 날짜순 추가."
 }

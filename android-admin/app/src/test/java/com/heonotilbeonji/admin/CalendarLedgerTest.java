@@ -67,7 +67,7 @@ public class CalendarLedgerTest {
             MainActivity activity = controller.get();
             Calendar month = AdminPlanner.calendar(); month.set(2026, Calendar.OCTOBER, 1);
             set(activity, "calendarPage", true); set(activity, "calendarMonth", month); set(activity, "selectedDay", "2026-10-08");
-            set(activity, "financeLoadedMonth", "2026-10"); set(activity, "requestFilter", 3);
+            set(activity, "financeLoadedMonth", "2026-10"); set(activity, "requestFilter", RequestListControls.DONE);
             set(activity, "dayFinances", new JSONArray().put(new JSONObject().put("date", "2026-10-08").put("paidAmount", 1000).put("receivedAmount", 3000))
                     .put(new JSONObject().put("date", "2026-10-09").put("paidAmount", 2000).put("receivedAmount", 4000)));
             var inbox = MainActivity.class.getDeclaredMethod("showInbox"); inbox.setAccessible(true); inbox.invoke(activity);

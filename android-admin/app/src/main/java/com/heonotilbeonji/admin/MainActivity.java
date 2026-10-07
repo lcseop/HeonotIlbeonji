@@ -33,6 +33,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -78,9 +79,11 @@ public final class MainActivity extends Activity {
     private CalendarLedger.Editor ledgerEditor;
     private AdminPlanner.FormEditor contactEditor;
     private AdminPlanner.FormEditor requestEditor;
-    private int requestFilter = 0;
+    private int requestFilter = RequestListControls.ALL;
     private int requestSort = 0;
     private int memoSort = 0;
+    private Spinner sortControl;
+    private RequestListControls.Filters filterControls;
     private String memoSearch = "";
     private String selectedRequestId = "";
     private Runnable collapseRequestSummary;
@@ -148,6 +151,8 @@ public final class MainActivity extends Activity {
         if (state != null) {
             calendarPage = state.getBoolean("calendarPage"); memoPage = state.getBoolean("memoPage");
             statsPage = state.getBoolean("statsPage");
+            requestFilter = state.getInt("requestFilterMask", RequestListControls.ALL);
+            requestSort = state.getInt("requestSort", 0); memoSort = state.getInt("memoSort", 0);
             selectedDay = state.getString("selectedDay", selectedDay);
             calendarMonth.setTimeInMillis(state.getLong("calendarMonth", calendarMonth.getTimeInMillis()));
             menuCollapsed = state.getBoolean("menuCollapsed");
@@ -169,6 +174,7 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
         state.putBoolean("statsPage", statsPage);
+        state.putInt("requestFilterMask", requestFilter); state.putInt("requestSort", requestSort); state.putInt("memoSort", memoSort);
         state.putString("selectedDay", selectedDay); state.putLong("calendarMonth", calendarMonth.getTimeInMillis());
         if (requestEditor != null && requestEditor.dialog.isShowing()) state.putString("requestDraft", requestEditor.draft().toString());
         if (ledgerEditor != null && ledgerEditor.dialog.isShowing()) state.putString("ledgerDraft", ledgerEditor.draft().toString());
@@ -349,17 +355,27 @@ public final class MainActivity extends Activity {
         }
         LinearLayout controls = new LinearLayout(this);
         actions.addView(controls, margins(7, 0));
-        Button sort = button("정렬", NAVY);
-        Button filter = button(memoPage ? "메모 추가" : "필터", memoPage ? CORAL : NAVY);
+        controls.setGravity(Gravity.CENTER_VERTICAL);
+        TextView sortLabel = label("정렬", 13, MUTED, true);
+        controls.addView(sortLabel, new LinearLayout.LayoutParams(dp(38), -2));
+        sortControl = RequestListControls.sort(this, memoPage ? RequestListControls.MEMO_SORTS : RequestListControls.REQUEST_SORTS,
+                memoPage ? memoSort : requestSort, this::changeSort);
+        controls.addView(sortControl, new LinearLayout.LayoutParams(0, dp(48), 1));
         ImageView refresh = AdminPlanner.iconButton(this, R.drawable.ic_material_refresh, "새로고침");
-        controls.addView(sort, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams controlGap = new LinearLayout.LayoutParams(0, dp(48), 1); controlGap.leftMargin = dp(6);
-        controls.addView(filter, controlGap);
         LinearLayout.LayoutParams refreshGap = new LinearLayout.LayoutParams(dp(48), dp(48)); refreshGap.leftMargin = dp(6);
         controls.addView(refresh, refreshGap);
-        sort.setOnClickListener(view -> chooseSort());
-        filter.setOnClickListener(view -> { if (memoPage) chooseRequestNote(); else chooseFilter(); });
+        filterControls = null;
+        if (!memoPage && !statsPage) {
+            filterControls = new RequestListControls.Filters(this, requestFilter, mask -> {
+                requestFilter = mask;
+                if (requestSort == 3) { requestSort = 2; sortControl.setSelection(2); }
+                renderRequests();
+            });
+            actions.addView(filterControls, margins(8, 0));
+        }
         if (memoPage) {
+            Button addMemo = AdminPlanner.button(this, "메모 추가", Color.WHITE, CORAL, R.drawable.ic_material_note_add);
+            actions.addView(addMemo, margins(8, 0)); addMemo.setOnClickListener(v -> chooseRequestNote());
             EditText search = new EditText(this);
             search.setSingleLine(true);
             search.setTextSize(14);
@@ -546,19 +562,10 @@ public final class MainActivity extends Activity {
             JSONObject item = requests.optJSONObject(i);
             if (item == null) continue;
             if (calendarPage && !selectedDay.equals(item.optString("date"))) continue;
-            if (requestFilter == 1 && !"new".equals(item.optString("status"))) continue;
-            if (requestFilter == 2 && !"contacted".equals(item.optString("status"))) continue;
-            if (requestFilter == 3 && !"done".equals(item.optString("status"))) continue;
+            if (!RequestListControls.matches(item, requestFilter)) continue;
             visible.add(item);
         }
-        Collections.sort(visible, (a, b) -> {
-            if (requestSort == 2) {
-                int dates = a.optString("date").compareTo(b.optString("date"));
-                if (dates != 0) return dates;
-            }
-            return requestSort == 1 ? Long.compare(a.optLong("created_at"), b.optLong("created_at")) :
-                    Long.compare(b.optLong("created_at"), a.optLong("created_at"));
-        });
+        Collections.sort(visible, (a, b) -> RequestListControls.compare(a, b, requestSort));
         notice.setText(calendarPage ? "날짜를 눌러 일정·금액·메모를 확인하세요" : "표시 " + visible.size() + "건 · 누르면 요약, 상세 보기로 전체 확인");
         if (calendarPage) {
             list.addView(AdminPlanner.month(this, calendarMonth, selectedDay, requests, requestFilter, dayMemos, dayFinances,
@@ -574,7 +581,7 @@ public final class MainActivity extends Activity {
             dayHeader.addView(today, new LinearLayout.LayoutParams(dp(48), dp(48)));
             list.addView(dayHeader, margins(12, 4));
         }
-        if (visible.isEmpty()) emptyCard("해당하는 신청서가 없습니다.");
+        if (visible.isEmpty()) emptyCard(requestFilter == 0 ? "표시할 상태를 체크해 주세요." : "해당하는 신청서가 없습니다.");
         for (JSONObject item : visible) {
             boolean expanded = selectedRequestId.equals(item.optString("id"));
             String state = item.optString("status");
@@ -714,7 +721,11 @@ public final class MainActivity extends Activity {
             try {
                 ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
                 runOnUiThread(() -> { result.accept(null); selectedRequestId = data.optString("requestId");
-                    if ("create".equals(data.optString("action"))) requestFilter = 0;
+                    if ("create".equals(data.optString("action"))) {
+                        requestFilter = RequestListControls.ALL;
+                        if (filterControls != null) filterControls.bind(this, requestFilter);
+                        if (requestSort == 3) { requestSort = 2; sortControl.setSelection(2); }
+                    }
                     if (calendarPage && !data.optString("date").isEmpty()) {
                         selectedDay = data.optString("date"); String[] parts = selectedDay.split("-");
                         calendarMonth.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1);
@@ -796,19 +807,20 @@ public final class MainActivity extends Activity {
         list.addView(empty, margins(12, 0));
     }
 
-    private void chooseSort() {
-        String[] options = memoPage ? new String[]{"최근 기록순", "오래된 기록순", "이름순", "희망 날짜순"} :
-                new String[]{"최신 신청순", "오래된 신청순", "희망 날짜순"};
-        new AlertDialog.Builder(this).setTitle("정렬 기준").setSingleChoiceItems(options, memoPage ? memoSort : requestSort,
-                (dialog, which) -> { if (memoPage) { memoSort = which; renderMemos(); } else { requestSort = which; renderRequests(); } dialog.dismiss(); })
-                .setNegativeButton("취소", null).show();
-    }
-
-    private void chooseFilter() {
-        String[] options = {"전체", "새 신청", "연락 완료", "처리 완료"};
-        new AlertDialog.Builder(this).setTitle("신청서 필터").setSingleChoiceItems(options, requestFilter,
-                (dialog, which) -> { requestFilter = which; renderRequests(); dialog.dismiss(); })
-                .setNegativeButton("취소", null).show();
+    private void changeSort(int selected) {
+        if (statsPage || list == null) return;
+        if (memoPage) {
+            if (memoSort == selected) return;
+            memoSort = selected; renderMemos();
+        } else {
+            if (requestSort == selected) return;
+            requestSort = selected;
+            if (selected == 3) {
+                requestFilter = RequestListControls.NEW | RequestListControls.CONTACTED;
+                if (filterControls != null) filterControls.bind(this, requestFilter);
+            }
+            renderRequests();
+        }
     }
 
     private void chooseRequestNote() {
