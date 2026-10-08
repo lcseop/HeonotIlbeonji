@@ -34,6 +34,7 @@ final class RequestCache {
                 new String[]{"reservedTime", "adminNote"} : data.has("status") ? new String[]{"status"} :
                 new String[]{"name", "phone", "address", "amount", "date", "timeSlot", "pickupMethod", "message"};
             for (String field : fields) if (data.has(field)) row.put(field, data.get(field));
+            if (data.has("customerFlag")) row.put("customerFlag", data.getString("customerFlag"));
             if (data.has("adminNote")) row.put("adminNoteUpdatedAt", System.currentTimeMillis());
             return row;
         } catch (Exception error) { throw new IllegalArgumentException(error); }

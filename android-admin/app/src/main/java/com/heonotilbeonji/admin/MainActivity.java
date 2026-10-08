@@ -639,6 +639,12 @@ public final class MainActivity extends Activity {
             if (calendarPage && item.optString("reservedTime").isEmpty())
                 text.addView(label("예약 시간 등록 안됨", 11, MUTED, false), margins(2, 0));
             row.addView(text, textParams);
+            String flag = item.optString("customerFlag");
+            if (!flag.isEmpty()) {
+                ImageView flagIcon = icon(CustomerFlags.icon(flag), CustomerFlags.color(flag), CustomerFlags.label(flag));
+                flagIcon.setPadding(dp(3), dp(3), dp(3), dp(3));
+                row.addView(flagIcon, new LinearLayout.LayoutParams(dp(28), dp(28)));
+            }
             ImageView arrow = icon(R.drawable.ic_material_expand_more, MUTED, expanded ? "요약 접기" : null);
             arrow.setRotation(expanded ? 180 : 0);
             arrow.setPadding(dp(13), dp(13), dp(13), dp(13));
@@ -745,7 +751,8 @@ public final class MainActivity extends Activity {
             return newest;
         }, (data, result) -> writes.execute(() -> {
             try {
-                ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
+                JSONObject response = ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
+                data.put("customerFlag", response.optString("customerFlag"));
                 runOnUiThread(() -> { applySavedRequest(data); result.accept(null); selectedRequestId = data.optString("requestId");
                     if ("create".equals(data.optString("action"))) {
                         requestFilter = RequestListControls.ALL;
@@ -894,7 +901,8 @@ public final class MainActivity extends Activity {
         for (JSONObject item : notes) {
             LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackground(touchBackground(Color.WHITE, 14));
-            card.addView(label(item.optString("name") + " 님 · " + item.optString("phone"), 16, NAVY, true));
+            TextView memoCustomer = label(item.optString("name") + " 님 · " + item.optString("phone"), 16, NAVY, true);
+            customerFlagTitle(memoCustomer, item); card.addView(memoCustomer);
             card.addView(label(RequestSummary.date(item.optString("date")) + " · " + RequestNotes.calendarTime(item), 12, BLUE, false), margins(5, 0));
             TextView content = label(item.optString("adminNote"), 15, NAVY, false); content.setMaxLines(3); content.setEllipsize(TextUtils.TruncateAt.END);
             card.addView(content, margins(8, 0));
@@ -934,6 +942,7 @@ public final class MainActivity extends Activity {
         LinearLayout heading = new LinearLayout(this);
         heading.setOrientation(LinearLayout.VERTICAL);
         TextView customer = label(name + " 님의 신청", 21, NAVY, true);
+        customerFlagTitle(customer, item);
         customer.setMaxLines(2);
         heading.addView(customer);
         TextView state = label(statusLabel(status) + "  ·  " + displayDate(item.optLong("created_at")) + " 접수", 12, statusColor(status), false);
@@ -957,6 +966,14 @@ public final class MainActivity extends Activity {
         detailLine(schedule, "수거 방식", item.optString("pickupMethod", "미기재"));
         LinearLayout address = detailSection(body, "연락처 · 수거 장소");
         detailLine(address, "전화번호", phone);
+        String customerFlag = item.optString("customerFlag");
+        Button flagButton = AdminPlanner.button(this, "고객 표시 · " + CustomerFlags.label(customerFlag),
+                CustomerFlags.color(customerFlag), SURFACE, CustomerFlags.icon(customerFlag));
+        flagButton.setSingleLine(false); flagButton.setMaxLines(2);
+        address.addView(flagButton, margins(8, 0));
+        LinearLayout flagProgress = LoadingTasks.indicator(this, "고객 표시 저장 중…");
+        address.addView(flagProgress, margins(4, 0));
+        flagButton.setOnClickListener(v -> chooseCustomerFlag(item, flagButton, flagProgress, customer));
         detailLine(address, "수거 주소", item.optString("address"));
         LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
         detailLine(belongings, "예상 수거량", item.optString("amount"));
@@ -1030,6 +1047,46 @@ public final class MainActivity extends Activity {
             int height = Math.min(dp(760), (int) (getResources().getDisplayMetrics().heightPixels * .88f));
             dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - dp(24), height);
         }
+    }
+
+    private void customerFlagTitle(TextView title, JSONObject item) {
+        String flag = item.optString("customerFlag");
+        Drawable symbol = flag.isEmpty() ? null : iconDrawable(CustomerFlags.icon(flag), CustomerFlags.color(flag));
+        if (symbol != null) symbol.setBounds(0, 0, dp(24), dp(24));
+        title.setCompoundDrawablesRelative(symbol, null, null, null); title.setCompoundDrawablePadding(dp(6));
+        title.setContentDescription(title.getText() + (flag.isEmpty() ? "" : " · " + CustomerFlags.label(flag)));
+    }
+
+    private void chooseCustomerFlag(JSONObject item, Button button, LinearLayout progress, TextView title) {
+        String[] flags = {"", "regular", "blacklist"};
+        String[] names = {"표시 없음 · 해제", "★ 단골", "⊘ 블랙리스트"};
+        String current = item.optString("customerFlag");
+        int selected = "regular".equals(current) ? 1 : "blacklist".equals(current) ? 2 : 0;
+        new AlertDialog.Builder(this).setTitle("전화번호별 고객 표시")
+            .setSingleChoiceItems(names, selected, (dialog, which) -> {
+                dialog.dismiss(); if (flags[which].equals(current)) return;
+                button.setEnabled(false); progress.setVisibility(View.VISIBLE);
+                writes.execute(() -> {
+                    try {
+                        JSONObject data = new JSONObject().put("action", "customerFlag").put("phone", item.optString("phone")).put("flag", flags[which]);
+                        JSONObject response = ApiClient.request(this, "POST", "/api/admin/native-requests", data, session());
+                        runOnUiThread(() -> {
+                            try {
+                                String flag = response.optString("flag");
+                                dataRevision++; requests = CustomerFlags.apply(requests, response.optString("phone"), flag);
+                                item.put("customerFlag", flag); customerFlagTitle(title, item);
+                                button.setText("고객 표시 · " + CustomerFlags.label(flag)); button.setTextColor(CustomerFlags.color(flag));
+                                button.setCompoundDrawablesWithIntrinsicBounds(iconDrawable(CustomerFlags.icon(flag), CustomerFlags.color(flag)), null, null, null);
+                                if (memoPage) renderMemos(); else if (!statsPage) renderRequests();
+                                Toast.makeText(this, "고객 표시를 저장했습니다.", Toast.LENGTH_SHORT).show();
+                            } catch (Exception error) { showError(error); }
+                            button.setEnabled(true); progress.setVisibility(View.GONE);
+                        });
+                    } catch (Exception error) {
+                        runOnUiThread(() -> { button.setEnabled(true); progress.setVisibility(View.GONE); }); showError(error);
+                    }
+                });
+            }).setNegativeButton("닫기", null).show();
     }
 
     private LinearLayout detailSection(LinearLayout parent, String title) {

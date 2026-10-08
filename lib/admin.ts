@@ -13,6 +13,7 @@ export type PickupRecord = {
   reservedTime: string;
   adminNote: string;
   adminNoteUpdatedAt: number;
+  customerFlag: '' | 'regular' | 'blacklist';
 };
 
 export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'timeSlot' | 'pickupMethod' | 'message'>;
@@ -39,6 +40,7 @@ export async function ensureTables(db: D1Database) {
   cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - 10);
   const cutoff = cutoffDate.getTime();
   const cleanup = [
+    db.prepare('DELETE FROM customer_flags WHERE updated_at < ? AND phone NOT IN (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)').bind(cutoff, cutoff),
     db.prepare('DELETE FROM calendar_memos WHERE updated_at < ?').bind(cutoff),
     db.prepare('DELETE FROM customer_memos WHERE updated_at < ? AND phone NOT IN (SELECT phone FROM pickup_requests WHERE last_activity_at >= ?)').bind(cutoff, cutoff),
     db.prepare('DELETE FROM pickup_requests WHERE last_activity_at < ? AND phone NOT IN (SELECT phone FROM customer_memos WHERE updated_at >= ?)').bind(cutoff, cutoff),
@@ -48,6 +50,9 @@ export async function ensureTables(db: D1Database) {
 }
 
 async function prepareTables(db: D1Database) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS customer_flags (
+    phone TEXT PRIMARY KEY, flag TEXT NOT NULL, updated_at INTEGER NOT NULL
+  )`).run();
   await db.prepare(`CREATE TABLE IF NOT EXISTS pickup_requests (
     id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, name TEXT NOT NULL,
     phone TEXT NOT NULL, address TEXT NOT NULL, amount TEXT NOT NULL,
@@ -107,6 +112,10 @@ export async function listPickups(db: D1Database) {
   const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
     time_slot AS timeSlot, pickup_method AS pickupMethod, message, status,
     reserved_time AS reservedTime, admin_note AS adminNote, admin_note_updated_at AS adminNoteUpdatedAt
+    , COALESCE((SELECT flag FROM customer_flags WHERE phone =
+      CASE WHEN replace(replace(replace(replace(pickup_requests.phone, '-', ''), ' ', ''), '(', ''), ')', '') LIKE '+82%'
+      THEN '0' || substr(replace(replace(replace(replace(pickup_requests.phone, '-', ''), ' ', ''), '(', ''), ')', ''), 4)
+      ELSE replace(replace(replace(replace(pickup_requests.phone, '-', ''), ' ', ''), '(', ''), ')', '') END), '') AS customerFlag
     FROM pickup_requests ORDER BY created_at DESC`).all<PickupRecord>();
   return result.results;
 }
@@ -129,6 +138,25 @@ export async function listMemos(db: D1Database) {
   const result = await db.prepare(`SELECT id, phone, name, title, content, created_at, updated_at
     FROM customer_memos ORDER BY updated_at DESC`).all<CustomerMemo>();
   return result.results;
+}
+
+export function parseCustomerFlag(data: Record<string, unknown>) {
+  if (typeof data.phone !== 'string' || data.phone.length > 30 || typeof data.flag !== 'string' || !['', 'regular', 'blacklist'].includes(data.flag)) return null;
+  const phone = data.phone.replace(/[\s()-]/g, '').replace(/^\+82/, '0');
+  if (!/^0\d{8,10}$/.test(phone)) return null;
+  return { phone, flag: data.flag as '' | 'regular' | 'blacklist' };
+}
+
+export async function saveCustomerFlag(db: D1Database, phone: string, flag: '' | 'regular' | 'blacklist') {
+  await ensureTables(db);
+  if (!flag) await db.prepare('DELETE FROM customer_flags WHERE phone = ?').bind(phone).run();
+  else await db.prepare(`INSERT INTO customer_flags (phone, flag, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(phone) DO UPDATE SET flag = excluded.flag, updated_at = excluded.updated_at`).bind(phone, flag, Date.now()).run();
+}
+
+export async function getCustomerFlag(db: D1Database, phone: string) {
+  const row = await db.prepare('SELECT flag FROM customer_flags WHERE phone = ?').bind(phone).first<{ flag: string }>();
+  return row?.flag || '';
 }
 
 export async function saveMemo(db: D1Database, input: MemoInput, id?: string) {

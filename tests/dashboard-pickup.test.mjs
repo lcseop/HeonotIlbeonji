@@ -157,7 +157,7 @@ test('warm saves skip repeated schema setup but still run retention cleanup as o
   await ensureTables(db); const first = setup;
   await ensureTables(db);
   assert.ok(first > 0); assert.equal(setup, first);
-  assert.equal(batches, 2); assert.equal(cleanups, 6);
+  assert.equal(batches, 2); assert.equal(cleanups, 8);
 });
 
 test('failed schema preparation retries rather than caching incomplete setup', async () => {

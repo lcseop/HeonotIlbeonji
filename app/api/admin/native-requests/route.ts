@@ -1,4 +1,4 @@
-import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer } from '@/lib/admin';
+import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer, parseCustomerFlag, saveCustomerFlag, getCustomerFlag } from '@/lib/admin';
 import { editManualPickup, parseManualPickup, parseAdminDetails, saveAdminDetails } from '@/lib/admin-planner';
 import { pickupDb, serverSettings } from '@/lib/admin-runtime';
 import { limitedJson } from '@/lib/pickup';
@@ -26,6 +26,14 @@ export async function POST(request: Request) {
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return privateJson({ message: '입력 형식이 올바르지 않습니다.' }, 400); }
+  if (data.action === 'customerFlag') {
+    const marking = parseCustomerFlag(data);
+    if (!marking) return privateJson({ message: '전화번호와 고객 표시를 확인해 주세요.' }, 400);
+    try {
+      await saveCustomerFlag(auth.db!, marking.phone, marking.flag);
+      return privateJson({ updated: true, ...marking });
+    } catch { return privateJson({ message: '고객 표시를 저장하지 못했습니다.' }, 503); }
+  }
   if (data.action === 'adminDetails') {
     const details = parseAdminDetails(data);
     if (!details || typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.id))
@@ -42,9 +50,9 @@ export async function POST(request: Request) {
     try {
       if (data.action === 'edit') {
         const updated = await editManualPickup(auth.db!, data.requestId, pickup);
-        return privateJson(updated ? { id: data.requestId, updated: true } : { message: '신청서를 찾지 못했습니다.' }, updated ? 200 : 404);
+        return privateJson(updated ? { id: data.requestId, updated: true, customerFlag: await getCustomerFlag(auth.db!, pickup.phone) } : { message: '신청서를 찾지 못했습니다.' }, updated ? 200 : 404);
       }
-      return privateJson({ id: await savePickup(auth.db!, pickup, data.requestId), created: true });
+      return privateJson({ id: await savePickup(auth.db!, pickup, data.requestId), created: true, customerFlag: await getCustomerFlag(auth.db!, pickup.phone) });
     } catch { return privateJson({ message: '신청서를 저장하지 못했습니다. 다시 저장해 주세요.' }, 503); }
   }
   if (typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(data.id) || !['new', 'contacted', 'done'].includes(String(data.status)))

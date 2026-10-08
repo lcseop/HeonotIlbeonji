@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 16,
-  "versionName": "1.4.3",
-  "apkPath": "/admin-app/heonot-admin-1.4.3.apk",
-  "sha256": "46c087e15a06b09371a2a7a0bfc8fb71599a37398e89988ebfe351a7652772e9",
-  "size": 4296307,
-  "releaseNotes": "신청서·메모·하루 기록 저장 대기 개선, 저장 및 목록 로딩 표시 추가, 저장 실패 시 입력 내용 유지."
+  "versionCode": 17,
+  "versionName": "1.4.4",
+  "apkPath": "/admin-app/heonot-admin-1.4.4.apk",
+  "sha256": "cc0a93e3ef7d979c460ec18225900ef6da06ea330beb76a44e59ea1e9b83e4e0",
+  "size": 4300863,
+  "releaseNotes": "전화번호별 단골·블랙리스트 지정 및 해제, 같은 번호의 기존·새 신청서에 아이콘 자동 표시."
 }
