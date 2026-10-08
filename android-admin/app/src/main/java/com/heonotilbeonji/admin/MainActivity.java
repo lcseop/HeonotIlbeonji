@@ -643,8 +643,16 @@ public final class MainActivity extends Activity {
             name.setSingleLine(true);
             name.setEllipsize(TextUtils.TruncateAt.END);
             text.addView(name);
-            text.addView(label(calendarPage ? RequestNotes.calendarTime(item) : "희망 " + RequestSummary.date(item.optString("date")),
-                    calendarPage ? 15 : 13, calendarPage ? BLUE : MUTED, calendarPage), margins(3, 0));
+            TextView visitTime = label(calendarPage ? RequestNotes.calendarTime(item) : "희망 " + RequestSummary.date(item.optString("date")),
+                    calendarPage ? 15 : 13, calendarPage ? BLUE : MUTED, calendarPage);
+            String pickupMethod = item.optString("pickupMethod");
+            if (calendarPage && ("대면 수거".equals(pickupMethod) || "비대면 수거".equals(pickupMethod))) {
+                visitTime.setCompoundDrawablesWithIntrinsicBounds(iconDrawable("비대면 수거".equals(pickupMethod) ?
+                        R.drawable.ic_material_person_off : R.drawable.ic_material_person, BLUE), null, null, null);
+                visitTime.setCompoundDrawablePadding(dp(6));
+                visitTime.setContentDescription(visitTime.getText() + " · " + pickupMethod);
+            }
+            text.addView(visitTime, margins(3, 0));
             if (calendarPage && item.optString("reservedTime").isEmpty())
                 text.addView(label("예약 시간 등록 안됨", 11, MUTED, false), margins(2, 0));
             row.addView(text, textParams);
@@ -671,7 +679,7 @@ public final class MainActivity extends Activity {
             addressParams.leftMargin = dp(6);
             summary.addView(address, addressParams);
             String method = item.optString("pickupMethod");
-            if (!method.isEmpty()) {
+            if (!calendarPage && ("대면 수거".equals(method) || "비대면 수거".equals(method))) {
                 boolean unattended = method.contains("비대면");
                 ImageView methodIcon = icon(unattended ? R.drawable.ic_material_person_off : R.drawable.ic_material_person,
                         unattended ? BLUE : MUTED, method);
