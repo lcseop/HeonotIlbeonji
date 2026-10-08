@@ -47,11 +47,16 @@ public class RequestListControlsTest {
    assertEquals(2,spinner.getSelectedItemPosition());
   }
  }
+ @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+ @Config(sdk=35, qualifiers="w320dp-h800dp")
  @Test public void largeFontCheckboxesRemainReadableAndUpdateImmediately() {
   try(var controller=Robolectric.buildActivity(MainActivity.class).setup()) {
    MainActivity a=controller.get(); var config=new android.content.res.Configuration(a.getResources().getConfiguration());
    config.fontScale=1.8f;a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());
    AtomicInteger result=new AtomicInteger(7); RequestListControls.Filters filters=new RequestListControls.Filters(a,7,result::set);
+   // Explicit size also exercises overflow on runtimes that do not emulate font scaling.
+   for(String name:new String[]{"새 신청","연락 완료","처리 완료"})
+    ((CheckBox)PlannerInteractionTest.text(filters,name)).setTextSize(24);
    int width=AdminPlanner.dp(a,288);
    filters.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
    filters.layout(0,0,width,filters.getMeasuredHeight());
@@ -60,6 +65,10 @@ public class RequestListControlsTest {
     assertEquals(1,chip.getLineCount());assertEquals(0,chip.getLayout().getEllipsisCount(0));
     assertTrue(chip.getWidth()-chip.getCompoundPaddingLeft()-chip.getCompoundPaddingRight()>=chip.getPaint().measureText(name));
    }
+   View first=PlannerInteractionTest.text(filters,"새 신청");
+   assertEquals(first.getTop(),PlannerInteractionTest.text(filters,"연락 완료").getTop());
+   assertEquals(first.getTop(),PlannerInteractionTest.text(filters,"처리 완료").getTop());
+   assertTrue(filters.getChildAt(0).getWidth()>filters.getWidth());
    PlannerInteractionTest.text(filters,"처리 완료").performClick();assertEquals(3,result.get());
    PlannerInteractionTest.text(filters,"새 신청").performClick();assertEquals(2,result.get());
    PlannerInteractionTest.text(filters,"연락 완료").performClick();assertEquals(0,result.get());
@@ -72,6 +81,21 @@ public class RequestListControlsTest {
     .put(row("c","연락","contacted","2026-10-08",2)).put(row("d","완료","done","2026-10-08",3));
    View calendar=AdminPlanner.month(controller.get(),month,"2026-10-08",requests,3,new JSONArray(),d->{},m->{});
    assertNotNull(PlannerInteractionTest.description(calendar,"26년 10월 8일 (목), 신청 2건"));
+  }
+ }
+ @Test public void choicesSurviveAnActivityRestartWithoutSavedState() throws Exception {
+  try(var controller=Robolectric.buildActivity(MainActivity.class).setup()) {
+   MainActivity a=controller.get();
+   var show=MainActivity.class.getDeclaredMethod("showInbox");show.setAccessible(true);show.invoke(a);
+   Spinner spinner=(Spinner)get(a,"sortControl");spinner.setSelection(3);shadowOf(Looper.getMainLooper()).idle();
+   PlannerInteractionTest.text((View)get(a,"filterControls"),"새 신청").performClick();
+   PlannerInteractionTest.text((View)get(a,"root"),"메뉴 접기").performClick();
+   set(a,"memoPage",true);show.invoke(a);spinner=(Spinner)get(a,"sortControl");spinner.setSelection(2);shadowOf(Looper.getMainLooper()).idle();
+   try(var restarted=Robolectric.buildActivity(MainActivity.class).setup()) {
+    MainActivity fresh=restarted.get();
+    assertEquals(2,get(fresh,"requestFilter"));assertEquals(2,get(fresh,"requestSort"));
+    assertEquals(2,get(fresh,"memoSort"));assertEquals(true,get(fresh,"menuCollapsed"));
+   }
   }
  }
  private static JSONObject row(String id,String name,String status,String date,int created)throws Exception{

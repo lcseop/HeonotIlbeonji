@@ -8,7 +8,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
-import android.widget.GridLayout;
+import android.widget.LinearLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import org.json.JSONObject;
@@ -64,18 +65,15 @@ final class RequestListControls {
             public void onNothingSelected(android.widget.AdapterView<?> parent) { }
         }); return spinner;
     }
-    static final class Filters extends GridLayout {
+    static final class Filters extends HorizontalScrollView {
         private final CheckBox[] chips = new CheckBox[3];
         private int mask;
         private boolean binding;
         Filters(Activity a, int initial, IntConsumer change) {
             super(a); mask = initial;
-            int width = a.getResources().getDisplayMetrics().widthPixels - AdminPlanner.dp(a, 32);
-            CheckBox probe = new CheckBox(a); probe.setText("연락 완료"); probe.setTextSize(13); probe.setSingleLine(true);
-            probe.setMinWidth(0); probe.setPadding(AdminPlanner.dp(a, 4), 0, AdminPlanner.dp(a, 6), 0);
-            probe.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-            int required = probe.getMeasuredWidth() + AdminPlanner.dp(a, 4);
-            int columns = Math.max(1, Math.min(3, width / required)); setColumnCount(columns);
+            setFillViewport(true); setHorizontalScrollBarEnabled(true);
+            LinearLayout row = new LinearLayout(a); row.setOrientation(LinearLayout.HORIZONTAL);
+            addView(row, new HorizontalScrollView.LayoutParams(-2, -2));
             String[] names = {"새 신청", "연락 완료", "처리 완료"};
             for (int i = 0; i < 3; i++) {
                 final int bit = 1 << i; CheckBox chip = new CheckBox(a); chips[i] = chip;
@@ -83,9 +81,8 @@ final class RequestListControls {
                 chip.setMinWidth(0); chip.setMinimumHeight(AdminPlanner.dp(a, 48));
                 chip.setPadding(AdminPlanner.dp(a, 4), 0, AdminPlanner.dp(a, 6), 0);
                 chip.setButtonTintList(ColorStateList.valueOf(Color.rgb(52, 111, 174)));
-                GridLayout.LayoutParams p = new GridLayout.LayoutParams();
-                p.rowSpec = GridLayout.spec(i / columns); p.columnSpec = GridLayout.spec(i % columns, GridLayout.FILL, 1f);
-                p.width = 0; p.height = -2; p.setMargins(0, 0, AdminPlanner.dp(a, 4), AdminPlanner.dp(a, 4)); addView(chip, p);
+                LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2, 1f);
+                p.setMargins(0, 0, AdminPlanner.dp(a, 4), AdminPlanner.dp(a, 4)); row.addView(chip, p);
                 chip.setOnCheckedChangeListener((button, checked) -> {
                     if (binding) return;
                     mask = checked ? mask | bit : mask & ~bit; style(a, chip); change.accept(mask);

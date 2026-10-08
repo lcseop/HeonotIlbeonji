@@ -151,6 +151,11 @@ public final class MainActivity extends Activity {
             return insets;
         });
         setContentView(root);
+        android.content.SharedPreferences preferences = getSharedPreferences("admin", MODE_PRIVATE);
+        requestFilter = preferences.getInt("ui_filter", RequestListControls.ALL) & RequestListControls.ALL;
+        requestSort = Math.max(0, Math.min(3, preferences.getInt("ui_request_sort", 0)));
+        memoSort = Math.max(0, Math.min(3, preferences.getInt("ui_memo_sort", 0)));
+        menuCollapsed = preferences.getBoolean("ui_menu_collapsed", false);
         if (state != null) {
             calendarPage = state.getBoolean("calendarPage"); memoPage = state.getBoolean("memoPage");
             statsPage = state.getBoolean("statsPage");
@@ -339,6 +344,7 @@ public final class MainActivity extends Activity {
         actions.setVisibility(statsPage || menuCollapsed ? View.GONE : View.VISIBLE);
         menuToggle.setOnClickListener(view -> {
             menuCollapsed = !menuCollapsed;
+            saveViewPreferences();
             if (menuCollapsed) {
                 View focused = actions.findFocus();
                 if (focused != null) {
@@ -362,7 +368,9 @@ public final class MainActivity extends Activity {
         actions.addView(controls, margins(7, 0));
         controls.setGravity(Gravity.CENTER_VERTICAL);
         TextView sortLabel = label("정렬", 13, MUTED, true);
-        controls.addView(sortLabel, new LinearLayout.LayoutParams(dp(38), -2));
+        sortLabel.setSingleLine(true);
+        LinearLayout.LayoutParams labelSpace = new LinearLayout.LayoutParams(-2, -2); labelSpace.rightMargin = dp(10);
+        controls.addView(sortLabel, labelSpace);
         sortControl = RequestListControls.sort(this, memoPage ? RequestListControls.MEMO_SORTS : RequestListControls.REQUEST_SORTS,
                 memoPage ? memoSort : requestSort, this::changeSort);
         controls.addView(sortControl, new LinearLayout.LayoutParams(0, dp(48), 1));
@@ -374,6 +382,7 @@ public final class MainActivity extends Activity {
             filterControls = new RequestListControls.Filters(this, requestFilter, mask -> {
                 requestFilter = mask;
                 if (requestSort == 3) { requestSort = 2; sortControl.setSelection(2); }
+                saveViewPreferences();
                 renderRequests();
             });
             actions.addView(filterControls, margins(8, 0));
@@ -758,6 +767,7 @@ public final class MainActivity extends Activity {
                         requestFilter = RequestListControls.ALL;
                         if (filterControls != null) filterControls.bind(this, requestFilter);
                         if (requestSort == 3) { requestSort = 2; sortControl.setSelection(2); }
+                        saveViewPreferences();
                     }
                     if (calendarPage && !data.optString("date").isEmpty()) {
                         selectedDay = data.optString("date"); String[] parts = selectedDay.split("-");
@@ -840,11 +850,17 @@ public final class MainActivity extends Activity {
         list.addView(empty, margins(12, 0));
     }
 
+    private void saveViewPreferences() {
+        getSharedPreferences("admin", MODE_PRIVATE).edit().putInt("ui_filter", requestFilter)
+            .putInt("ui_request_sort", requestSort).putInt("ui_memo_sort", memoSort)
+            .putBoolean("ui_menu_collapsed", menuCollapsed).apply();
+    }
+
     private void changeSort(int selected) {
         if (statsPage || list == null) return;
         if (memoPage) {
             if (memoSort == selected) return;
-            memoSort = selected; renderMemos();
+            memoSort = selected; saveViewPreferences(); renderMemos();
         } else {
             if (requestSort == selected) return;
             requestSort = selected;
@@ -852,7 +868,7 @@ public final class MainActivity extends Activity {
                 requestFilter = RequestListControls.NEW | RequestListControls.CONTACTED;
                 if (filterControls != null) filterControls.bind(this, requestFilter);
             }
-            renderRequests();
+            saveViewPreferences(); renderRequests();
         }
     }
 

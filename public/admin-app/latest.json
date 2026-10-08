@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 17,
-  "versionName": "1.4.4",
-  "apkPath": "/admin-app/heonot-admin-1.4.4.apk",
-  "sha256": "cc0a93e3ef7d979c460ec18225900ef6da06ea330beb76a44e59ea1e9b83e4e0",
-  "size": 4300863,
-  "releaseNotes": "전화번호별 단골·블랙리스트 지정 및 해제, 같은 번호의 기존·새 신청서에 아이콘 자동 표시."
+  "versionCode": 18,
+  "versionName": "1.4.5",
+  "apkPath": "/admin-app/heonot-admin-1.4.5.apk",
+  "sha256": "336576ce13d46c960c54cc20c2aef14032be47aa502a443a03b8b0907540ffe5",
+  "size": 4217806,
+  "releaseNotes": "필터·신청서 정렬·메모 정렬·메뉴 펼침 상태 재시작 유지, 정렬 글자 줄바꿈 방지, 잘리지 않는 한 줄 필터."
 }
