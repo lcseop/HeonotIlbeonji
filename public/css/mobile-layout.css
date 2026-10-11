@@ -8,7 +8,7 @@
 .blog-link { width: 76px; }
 .blog-link img { width: 64px; height: auto; display: block; }
 .cafe-link { width: 44px; }
-.cafe-icon { display: block; width: 40px; height: 40px; background: url('../images/naver-cafe-transparent.png') center / 58px 58px no-repeat; }
+.cafe-icon { display: block; width: 40px; height: 40px; background: url('../images/naver-cafe-transparent.png') center / 40px 40px no-repeat; }
 .social-link:hover { background-color: #eef8f1; }
 .social-link:focus-visible { outline: 2px solid #147465; outline-offset: 2px; }
 @media (min-width: 761px) and (max-width: 1150px) { .desktop-nav { display: none; } }
