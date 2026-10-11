@@ -46,7 +46,7 @@ export async function submitDashboardPickup(request: Request, env: NodeJS.Proces
   } catch { return privateJson({ message: '자동 입력 방지 확인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' }, 503); }
 
   try {
-    await savePickup(settings.db, pickup);
+    await savePickup(settings.db, pickup, undefined, true);
   } catch {
     return privateJson({ message: '신청 내용을 저장하지 못했습니다. 잠시 후 다시 시도하거나 전화해 주세요.' }, 503);
   }

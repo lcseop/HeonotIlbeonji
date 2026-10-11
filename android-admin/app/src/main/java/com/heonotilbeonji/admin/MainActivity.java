@@ -79,6 +79,9 @@ public final class MainActivity extends Activity {
     private JSONArray dayMemos = new JSONArray();
     private JSONArray dayFinances = new JSONArray();
     private String financeLoadedMonth = "", financeError = "";
+    private JSONObject websiteStats = new JSONObject();
+    private String websiteLoadedMonth = "", websiteError = "";
+    private boolean websiteStatsView = true;
     private CalendarLedger.Editor ledgerEditor;
     private AdminPlanner.FormEditor contactEditor;
     private AdminPlanner.FormEditor requestEditor;
@@ -159,6 +162,7 @@ public final class MainActivity extends Activity {
         if (state != null) {
             calendarPage = state.getBoolean("calendarPage"); memoPage = state.getBoolean("memoPage");
             statsPage = state.getBoolean("statsPage");
+            websiteStatsView = state.getBoolean("websiteStatsView", true);
             requestFilter = state.getInt("requestFilterMask", RequestListControls.ALL);
             requestSort = state.getInt("requestSort", 0); memoSort = state.getInt("memoSort", 0);
             selectedDay = state.getString("selectedDay", selectedDay);
@@ -182,6 +186,7 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
         state.putBoolean("statsPage", statsPage);
+        state.putBoolean("websiteStatsView", websiteStatsView);
         state.putInt("requestFilterMask", requestFilter); state.putInt("requestSort", requestSort); state.putInt("memoSort", memoSort);
         state.putString("selectedDay", selectedDay); state.putLong("calendarMonth", calendarMonth.getTimeInMillis());
         if (requestEditor != null && requestEditor.dialog.isShowing()) state.putString("requestDraft", requestEditor.draft().toString());
@@ -456,6 +461,7 @@ public final class MainActivity extends Activity {
     private void renderStats() {
         if (list == null || !statsPage) return;
         list.removeAllViews(); count.setText("통계");
+        notice.setText("월별 합계와 날짜별 기록을 확인하세요");
         LinearLayout period = new LinearLayout(this); period.setGravity(Gravity.CENTER_VERTICAL);
         period.setPadding(dp(8), dp(8), dp(8), dp(8)); period.setBackground(background(Color.WHITE, 14));
         ImageView previous = AdminPlanner.iconButton(this, R.drawable.ic_material_chevron_left, "통계 이전 달");
@@ -468,6 +474,21 @@ public final class MainActivity extends Activity {
         period.addView(next, new LinearLayout.LayoutParams(dp(48), dp(48)));
         previous.setOnClickListener(v -> moveStatsMonth(-1)); next.setOnClickListener(v -> moveStatsMonth(1));
         list.addView(period, margins(6, 0));
+        LinearLayout sections = new LinearLayout(this);
+        String[] sectionNames = {"홈페이지", "금액"};
+        for (int i = 0; i < sectionNames.length; i++) {
+            final boolean website = i == 0;
+            boolean active = website == websiteStatsView;
+            Button tab = AdminPlanner.button(this, sectionNames[i], active ? Color.WHITE : NAVY, active ? NAVY : Color.WHITE,
+                    website ? R.drawable.ic_material_bar_chart : R.drawable.ic_material_calendar_month);
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, -2, 1); if (i == 0) p.rightMargin = dp(8);
+            sections.addView(tab, p); tab.setOnClickListener(v -> { websiteStatsView = website; renderStats(); });
+        }
+        list.addView(sections, margins(12, 0));
+        if (websiteStatsView) {
+            list.addView(WebsiteStats.panel(this, websiteStats, websiteLoadedMonth.equals(financeMonth()), websiteError), margins(12, 0));
+            return;
+        }
         if (!financeLoadedMonth.equals(financeMonth())) {
             TextView loading = label(financeError.isEmpty() ? "월 금액을 불러오는 중…" : "금액을 불러오지 못했습니다. 새로고침을 눌러 주세요.", 14, MUTED, false);
             loading.setPadding(dp(16), dp(20), dp(16), dp(20)); list.addView(loading, margins(10, 0)); return;
@@ -488,7 +509,7 @@ public final class MainActivity extends Activity {
 
     private void moveStatsMonth(int offset) {
         calendarMonth.set(Calendar.DAY_OF_MONTH, 1); calendarMonth.add(Calendar.MONTH, offset);
-        selectedDay = AdminPlanner.iso(calendarMonth); financeError = ""; renderStats(); refresh();
+        selectedDay = AdminPlanner.iso(calendarMonth); financeError = ""; websiteError = ""; renderStats(); refresh();
     }
 
     private void showSettings() {
@@ -512,15 +533,30 @@ public final class MainActivity extends Activity {
         final boolean loadMemos = memoPage, loadCalendar = calendarPage;
         final boolean loadStats = statsPage;
         final String month = financeMonth();
-        notice.setText(statsPage ? "금액을 불러오는 중…" : memoPage ? "메모를 불러오는 중…" : "신청 내용을 불러오는 중…");
+        notice.setText(statsPage ? "통계를 불러오는 중…" : memoPage ? "메모를 불러오는 중…" : "신청 내용을 불러오는 중…");
         io.execute(() -> {
             try {
                 if (loadStats) {
-                    JSONArray finances = ApiClient.request(this, "GET", "/api/admin/native-day-finances?month=" + month, null, session()).getJSONArray("records");
+                    JSONArray financeResult = null; JSONObject websiteResult = null;
+                    String financeFailure = "", websiteFailure = "";
+                    try { financeResult = ApiClient.request(this, "GET", "/api/admin/native-day-finances?month=" + month, null, session()).getJSONArray("records"); }
+                    catch (Exception e) {
+                        if (e instanceof ApiClient.ApiException && ((ApiClient.ApiException) e).status == 401) throw e;
+                        financeFailure = "금액 기록 연결 실패";
+                    }
+                    try { websiteResult = ApiClient.request(this, "GET", "/api/admin/native-website-stats?month=" + month, null, session()); }
+                    catch (Exception e) {
+                        if (e instanceof ApiClient.ApiException && ((ApiClient.ApiException) e).status == 401) throw e;
+                        websiteFailure = "홈페이지 통계 연결 실패";
+                    }
+                    final JSONArray finances = financeResult; final JSONObject website = websiteResult;
+                    final String financeIssue = financeFailure, websiteIssue = websiteFailure;
                     runOnUiThread(() -> {
                         if (revision != dataRevision) return;
                         if (!month.equals(financeMonth())) return;
-                        dayFinances = finances; financeLoadedMonth = month; financeError = "";
+                        financeError = financeIssue; websiteError = websiteIssue;
+                        if (finances != null) { dayFinances = finances; financeLoadedMonth = month; }
+                        if (website != null) { websiteStats = website; websiteLoadedMonth = month; }
                         if (statsPage) renderStats(); else if (calendarPage) renderRequests();
                     });
                 } else if (loadMemos) {

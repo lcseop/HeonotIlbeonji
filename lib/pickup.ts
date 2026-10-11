@@ -43,7 +43,7 @@ export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | 
   return fields as Pickup;
 }
 
-export async function limitedJson(request: Request) {
+export async function limitedJson(request: Request, maxBytes = 8192) {
   const reader = request.body?.getReader();
   if (!reader) throw new Error('empty');
   const chunks: Uint8Array[] = [];
@@ -53,7 +53,7 @@ export async function limitedJson(request: Request) {
       const { done, value } = await reader.read();
       if (done) break;
       length += value.byteLength;
-      if (length > 8192) { await reader.cancel(); throw new Error('large'); }
+      if (length > maxBytes) { await reader.cancel(); throw new Error('large'); }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }

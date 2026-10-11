@@ -1,3 +1,5 @@
+import { ensureWebsiteStats, websiteStatStatements } from './website-stats.ts';
+
 export type PickupRecord = {
   id: string;
   created_at: number;
@@ -96,14 +98,19 @@ async function prepareTables(db: D1Database) {
 
 }
 
-export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string) {
+export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string, website = false) {
   await ensureTables(db);
   const id = requestId || crypto.randomUUID();
-  await db.prepare(`INSERT INTO pickup_requests
+  const insert = db.prepare(`INSERT INTO pickup_requests
     (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
-      pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now()).run();
+      pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now());
+  if (website && typeof db.batch === 'function') {
+    await ensureWebsiteStats(db);
+    // Commit the accepted website request and its anonymous count together.
+    await db.batch([insert, ...websiteStatStatements(db, `request:${id}`, 'request')]);
+  } else await insert.run();
   return id;
 }
 
