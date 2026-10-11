@@ -27,6 +27,8 @@
   <link rel="stylesheet" href="../css/motion.css">
   <link rel="stylesheet" href="../css/pickup-guide.css">
   <link rel="stylesheet" href="../css/area-map.css">
+  <link rel="stylesheet" href="../css/mobile-layout.css">
+  <script src="../js/mobile-layout.js" defer></script>
   <script src="../js/script.js" defer></script>
   <script src="../js/pickup.js" defer></script>
   <script src="../js/website-stats.js" defer></script>
@@ -42,6 +44,7 @@
       <a class="header-cta" href="#request">수거 신청</a>
     </div>
   </header>
+  <nav class="mobile-section-nav" aria-label="모바일 주요 메뉴"><a href="#items">수거 품목</a><a href="#area">수거 지역</a><a href="#request">수거 신청</a></nav>
 
   <main id="main">
     <section class="hero">
@@ -51,6 +54,7 @@
           <h1 class="hero-heading"><span class="hero-kicker">헌옷 팔 땐, 일번지.</span><br><em class="hero-title">헌옷일번지</em></h1>
           <p class="hero-subtitle">비워지는 우리 집,<br>다시 쓰이는 소중한 자원.</p>
           <p class="hero-description">무거운 헌옷과 쌓아둔 물건들,<br>직접 옮기지 마세요. 저희가 찾아갈게요.</p>
+          <p class="hero-essential">헌옷 <strong>20kg 이상</strong> · 대면·비대면 상담</p>
           <div class="hero-actions">
             <a class="button primary" href="#request">수거 신청하기</a>
             <a class="button text-button" href="tel:01048808259">010-4880-8259</a>
@@ -88,33 +92,33 @@
           </div>
           <div class="guide-details">
             <article class="guide-card" id="guide-clothes">
-              <div class="guide-card-heading"><h4 class="guide-title">헌옷 · 의류</h4><span class="guide-badge">20kg 이상</span></div>
-              <div class="guide-body"><p><strong>수거 가능</strong><span class="guide-copy">각종 옷가지, 장갑, 모자, 스카프, 속옷, 양말 등</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">단체복, 유니폼 (문의), 오염이 심한 의류, 기름 묻은 작업복</span></p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-clothes-body"><span>헌옷 · 의류</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">20kg 이상</span></div>
+              <div class="guide-body" id="guide-clothes-body"><p><strong>수거 가능</strong><span class="guide-copy">각종 옷가지, 장갑, 모자, 스카프, 속옷, 양말 등</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">단체복, 유니폼 (문의), 오염이 심한 의류, 기름 묻은 작업복</span></p></div>
             </article>
             <article class="guide-card" id="guide-shoes">
-              <div class="guide-card-heading"><h4 class="guide-title">신발 · 가방</h4><span class="guide-badge">제외 품목 확인</span></div>
-              <div class="guide-body"><p><strong>신발</strong><span class="guide-copy">운동화, 구두</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">마모가 심하거나 삭아서 신을 수 없는 신발, 부츠 등 겨울신발, 슬리퍼, 장화, 삼선슬리퍼, 약간이라도 벌어지거나 찢어진 신발</span></p><p class="guide-note"><b style="color:rgb(234, 50, 50)">신발은 더운 나라로 수출되어 겨울신발은 수거하지 않습니다.</b></p><p><strong>가방</strong><span class="guide-copy">핸드백, 배낭, 학생가방, 지갑</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">하드케이스 가방, 여행용 캐리어 (최근 캐리어는 가능)</span></p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-shoes-body"><span>신발 · 가방</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">제외 품목 확인</span></div>
+              <div class="guide-body" id="guide-shoes-body"><p><strong>신발</strong><span class="guide-copy">운동화, 구두</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">마모가 심하거나 삭아서 신을 수 없는 신발, 부츠 등 겨울신발, 슬리퍼, 장화, 삼선슬리퍼, 약간이라도 벌어지거나 찢어진 신발</span></p><p class="guide-note"><b style="color:rgb(234, 50, 50)">신발은 더운 나라로 수출되어 겨울신발은 수거하지 않습니다.</b></p><p><strong>가방</strong><span class="guide-copy">핸드백, 배낭, 학생가방, 지갑</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">하드케이스 가방, 여행용 캐리어 (최근 캐리어는 가능)</span></p></div>
             </article>
             <article class="guide-card" id="guide-household">
-              <div class="guide-card-heading"><h4 class="guide-title">액세서리 · 침구 · 주방용품</h4><span class="guide-badge">침구 일부 무상</span></div>
-              <div class="guide-body"><p><strong>액세서리·소품</strong><span class="guide-copy">넥타이, 벨트(혁띠), 인형, 목걸이, 반지, 시계</span></p><p><strong>무상 수거</strong><span class="guide-copy">커튼, 담요, 얇은 이불</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">솜이불, 두꺼운 이불, 쿠션</span></p><p><strong>주방용품</strong><span class="guide-copy">냄비, 프라이팬, 숟가락 등등, 접시 (박스에 파손되지 않게 포장)</span></p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-household-body"><span>액세서리 · 침구 · 주방용품</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">침구 일부 무상</span></div>
+              <div class="guide-body" id="guide-household-body"><p><strong>액세서리·소품</strong><span class="guide-copy">넥타이, 벨트(혁띠), 인형, 목걸이, 반지, 시계</span></p><p><strong>무상 수거</strong><span class="guide-copy">커튼, 담요, 얇은 이불</span></p><p class="guide-exclusion"><strong>수거 불가</strong><span class="guide-copy">솜이불, 두꺼운 이불, 쿠션</span></p><p><strong>주방용품</strong><span class="guide-copy">냄비, 프라이팬, 숟가락 등등, 접시 (박스에 파손되지 않게 포장)</span></p></div>
             </article>
             <article class="guide-card" id="guide-books">
-              <div class="guide-card-heading"><h4 class="guide-title">헌책 · 도서 · 종이</h4><span class="guide-badge">묶어서 준비</span></div>
-              <div class="guide-body"><p><strong>준비 방법</strong><span class="guide-copy">20~30cm 높이로 <b style="color:red">균일하게</b> 노끈으로 묶어 주세요.</span></p><p><strong>수량이 많다면</strong><span class="guide-copy">미리 알려주시면 별도 방문 일정을 상담해 드립니다.</span></p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-books-body"><span>헌책 · 도서 · 종이</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">20~30cm 묶음</span></div>
+              <div class="guide-body" id="guide-books-body"><p><strong>준비 방법</strong><span class="guide-copy">20~30cm 높이로 <b style="color:red">균일하게</b> 노끈으로 묶어 주세요.</span></p><p><strong>수량이 많다면</strong><span class="guide-copy">미리 알려주시면 별도 방문 일정을 상담해 드립니다.</span></p></div>
             </article>
             <article class="guide-card" id="guide-appliances">
-              <div class="guide-card-heading"><h4 class="guide-title">컴퓨터 · 가전제품</h4><span class="guide-badge">연식·상태 상담</span></div>
-              <div class="guide-body"><p><strong>상담 품목</strong><span class="guide-copy">PC 본체, 모니터, 노트북, 에어컨, TV, 냉장고, 세탁기</span></p><p><strong>유상수거 조건</strong><span class="guide-copy">냉장고·세탁기 등 가전제품은 고장이 없고 연식이 7년 이하인 경우 유상수거합니다.</span></p><p class="guide-note">제품 종류, 연식과 작동 상태를 알려주세요. 금액과 자세한 수거 조건은 상담 시 안내드립니다.</p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-appliances-body"><span>컴퓨터 · 가전제품</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">연식·상태 상담</span></div>
+              <div class="guide-body" id="guide-appliances-body"><p><strong>상담 품목</strong><span class="guide-copy">PC 본체, 모니터, 노트북, 에어컨, TV, 냉장고, 세탁기</span></p><p><strong>유상수거 조건</strong><span class="guide-copy">냉장고·세탁기 등 가전제품은 고장이 없고 연식이 7년 이하인 경우 유상수거합니다.</span></p><p class="guide-note">제품 종류, 연식과 작동 상태를 알려주세요. 금액과 자세한 수거 조건은 상담 시 안내드립니다.</p></div>
             </article>
             <article class="guide-card" id="guide-collectibles">
-              <div class="guide-card-heading"><h4 class="guide-title">장식품 · 취미용품 · 기타 물품</h4><span class="guide-badge">편하게 문의</span></div>
-              <div class="guide-body"><p><strong>상담 품목</strong><span class="guide-copy">장식품, 민속품, <b style="color:red">놋그릇</b>, 중고 스마트폰, <b style="color:red">레코드판</b>, 수석, 미싱(재봉틀), <b style="color:red">생필품</b>, 시계, <b style="color:blue">낚시 용품, 전기 자전거</b></span></p><p class="guide-note">목록에 없는 물건도 종류와 상태를 알려주시면 수거 가능 여부를 안내해 드립니다.</p></div>
+              <div class="guide-card-heading"><h4 class="guide-title"><button class="guide-toggle" type="button" aria-expanded="true" aria-controls="guide-collectibles-body"><span>장식품 · 취미용품 · 기타 물품</span><span class="guide-toggle-icon" aria-hidden="true"></span></button></h4><span class="guide-badge">편하게 문의</span></div>
+              <div class="guide-body" id="guide-collectibles-body"><p><strong>상담 품목</strong><span class="guide-copy">장식품, 민속품, <b style="color:red">놋그릇</b>, 중고 스마트폰, <b style="color:red">레코드판</b>, 수석, 미싱(재봉틀), <b style="color:red">생필품</b>, 시계, <b style="color:blue">낚시 용품, 전기 자전거</b></span></p><p class="guide-note">목록에 없는 물건도 종류와 상태를 알려주시면 수거 가능 여부를 안내해 드립니다.</p></div>
             </article>
           </div>
           <section class="pickup-pictograms" aria-labelledby="pictogram-title">
             <div class="pictogram-heading"><div><p class="section-label">그림으로 한눈에</p><h3 id="pictogram-title">혹시, 집에 이런 물건도 있나요?</h3></div><p>안 쓰는 물건, 함께 문의해 주세요.<br>그림을 누르면 해당 품목의 수거 기준을 볼 수 있어요.</p></div>
-            <ul class="pictogram-grid">
+            <ul class="pictogram-grid" id="pickupPictogramGrid">
               <li><a href="#guide-clothes"><span class="item-silhouette" style="--sprite-x:1.596424%;--sprite-y:8.134642%;--sprite-size:852.884615% 509.770115%;--sprite-width:100.000000%;--sprite-height:83.653846%" aria-hidden="true"></span><span>옷가지</span></a></li>
               <li><a href="#guide-clothes"><span class="item-silhouette" style="--sprite-x:16.768293%;--sprite-y:7.142857%;--sprite-size:1323.880597% 474.331551%;--sprite-width:71.657754%;--sprite-height:100.000000%" aria-hidden="true"></span><span>바지</span></a></li>
               <li><a href="#guide-shoes"><span class="item-silhouette" style="--sprite-x:29.217059%;--sprite-y:13.222080%;--sprite-size:873.891626% 821.296296%;--sprite-width:100.000000%;--sprite-height:53.201970%" aria-hidden="true"></span><span>운동화</span></a></li>
@@ -148,28 +152,16 @@
               <li><a href="#guide-clothes"><span class="item-silhouette" style="--sprite-x:85.841837%;--sprite-y:94.297636%;--sprite-size:861.165049% 527.976190%;--sprite-width:100.000000%;--sprite-height:81.553398%" aria-hidden="true"></span><span>장갑</span></a></li>
               <li><a href="#guide-clothes"><span class="item-silhouette" style="--sprite-x:98.664971%;--sprite-y:92.517007%;--sprite-size:882.587065% 583.552632%;--sprite-width:100.000000%;--sprite-height:75.621891%" aria-hidden="true"></span><span>모자</span></a></li>
             </ul>
+            <button class="mobile-more" type="button" aria-controls="pickupPictogramGrid" aria-expanded="false" data-more-label="더 많은 수거 품목 보기 +">더 많은 수거 품목 보기 +</button>
             <div class="pictogram-footer"><p>헌옷은 20kg 이상 · 커튼·담요·얇은 이불은 무상 수거<br>품목의 상태·연식에 따라 수거 여부와 비용이 달라질 수 있어요.</p><a class="button primary" href="#request">이 물건도 수거 문의하기 <span>→</span></a></div>
           </section>
           <aside class="guide-access"><strong>엘리베이터 없는 주택, 2층 이상인가요?</strong><p>방문 전에 꼭 말씀해 주세요. 상담 후 수거 가능 여부를 결정합니다.</p></aside>
-          <div class="extra-services"><div><p class="section-label">정리가 필요한 순간에도</p><h3>물건 수거부터 심부름까지</h3><p><b style="color:rgb(206, 163, 255); font-size:1.4em">이사 전 안쓰는 물건 정리, &nbsp;고인 유품 정리, 가정 폐기물 처리</b>, 사무실 정리,<br><b style="color:red; font-size:1.3em">간단한 심부름</b>도 문의해 주세요.</p><small>작업 범위와 비용은 상담 후 안내드립니다.</small></div><a class="button" href="tel:01048808259">전화로 상담하기</a></div>
+          <div class="extra-services"><div><p class="section-label">정리가 필요한 순간에도</p><h3>물건 수거부터 심부름까지</h3><p>이사 전 물건 정리, 고인 유품 정리, 가정 폐기물 처리, 사무실 정리와 간단한 심부름도 문의해 주세요.</p><small>작업 범위와 비용은 상담 후 안내드립니다.</small></div><a class="button" href="tel:01048808259">전화로 상담하기</a></div>
         </div>
       </div>
     </section>
 
-    <section class="section gallery-section" id="gallery"><div class="container">
-      <div class="section-heading"><div><p class="section-label">OUR PICKUP STORIES</p><h2>사진으로 만나는<br>우리 동네 수거 이야기</h2></div><p class="gallery-intro">차곡차곡 모아두신 물건들이 새 쓰임을 찾도록.<br>헌옷일번지의 실제 수거 현장을 소개합니다.</p></div>
-      <div class="pickup-route" aria-hidden="true">
-        <div class="pickup-route-travel"><img src="../images/pickup-truck.svg" alt="" width="64" height="64"></div>
-      </div>
-      <div class="gallery-grid">
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160312_110457.jpg" alt="방 안에 봉투별로 모아둔 의류와 가방" width="550" height="309" loading="lazy"></div><figcaption><span>헌옷 정리</span><h3>계절이 바뀌면, 옷장도 가볍게</h3><p>안 입는 옷을 모아두고 방문 일정을 상담하세요.</p></figcaption></figure>
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160312_122648.jpg" alt="수거할 책 더미와 현장 계량용 저울" width="550" height="309" loading="lazy"></div><figcaption><span>헌책 수거</span><h3>한 권 한 권, 모이면 꽤 무겁죠</h3><p>무거운 책은 직접 옮기지 말고 문의해 주세요.</p></figcaption></figure>
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20260203_104050.png" alt="수거 차량에 차곡차곡 실은 책과 수거 봉투" width="550" height="309" loading="lazy"></div><figcaption><span>방문 운반</span><h3>운반까지 저희가 함께할게요</h3><p>현장에서 확인한 물품을 차량으로 옮깁니다.</p></figcaption></figure>
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160412_145644.jpg" alt="의류와 생활용품 옆에 준비된 현장 저울" width="550" height="309" loading="lazy"></div><figcaption><span>현장 계량</span><h3>무게는 눈앞에서 확인해요</h3><p>품목과 무게를 함께 확인하고 정산합니다.</p></figcaption></figure>
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20260918_111806.jpg" alt="헌옷일번지 수거 차량의 측면과 적재 공간" width="4000" height="3000" loading="lazy"></div><figcaption><span>직접 방문</span><h3>익숙한 동네, 반가운 수거 차량</h3><p>약속한 일정에 헌옷일번지가 찾아갑니다.</p></figcaption></figure>
-        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/Notes_260920_005247_8f4.jpg" alt="현관 안쪽에 가지런히 준비된 의류와 신발 봉투" width="1440" height="1920" loading="lazy" style="object-position:50% 60%"></div><figcaption><span>생활 속 정리</span><h3>모아두신 만큼, 공간은 넓어지고</h3><p>의류와 신발, 가방을 한 번에 상담해 보세요.</p></figcaption></figure>
-      </div>
-    </div></section>
+
 
     <section class="section process-section" id="process"><div class="container">
       <div class="center-heading"><p class="section-label">HOW IT WORKS</p><h2>신청부터 수거까지, 간단하게</h2></div>
@@ -199,6 +191,22 @@
         <div id="pickupChallenge" class="pickup-challenge"></div>
         <button class="submit-button" type="submit" disabled>수거 신청하기</button><p class="form-notice" id="formNotice" role="status" aria-live="polite">온라인 접수 가능 여부를 확인하고 있습니다.</p><p class="form-phone">전화로도 신청할 수 있어요. <a href="tel:01048808259">010-4880-8259</a></p><noscript><p>온라인 신청에는 자바스크립트가 필요합니다. 전화로 문의해 주세요.</p></noscript>
       </form>
+    </div></section>
+
+    <section class="section gallery-section" id="gallery"><div class="container">
+      <div class="section-heading"><div><p class="section-label">OUR PICKUP STORIES</p><h2>사진으로 만나는<br>우리 동네 수거 이야기</h2></div><p class="gallery-intro">차곡차곡 모아두신 물건들이 새 쓰임을 찾도록.<br>헌옷일번지의 실제 수거 현장을 소개합니다.</p></div>
+      <div class="pickup-route" aria-hidden="true">
+        <div class="pickup-route-travel"><img src="../images/pickup-truck.svg" alt="" width="64" height="64"></div>
+      </div>
+      <div class="gallery-grid" id="pickupGalleryGrid">
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160312_110457.jpg" alt="방 안에 봉투별로 모아둔 의류와 가방" width="550" height="309" loading="lazy"></div><figcaption><span>헌옷 정리</span><h3>계절이 바뀌면, 옷장도 가볍게</h3><p>안 입는 옷을 모아두고 방문 일정을 상담하세요.</p></figcaption></figure>
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160312_122648.jpg" alt="수거할 책 더미와 현장 계량용 저울" width="550" height="309" loading="lazy"></div><figcaption><span>헌책 수거</span><h3>한 권 한 권, 모이면 꽤 무겁죠</h3><p>무거운 책은 직접 옮기지 말고 문의해 주세요.</p></figcaption></figure>
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20260203_104050.png" alt="수거 차량에 차곡차곡 실은 책과 수거 봉투" width="550" height="309" loading="lazy"></div><figcaption><span>방문 운반</span><h3>운반까지 저희가 함께할게요</h3><p>현장에서 확인한 물품을 차량으로 옮깁니다.</p></figcaption></figure>
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20160412_145644.jpg" alt="의류와 생활용품 옆에 준비된 현장 저울" width="550" height="309" loading="lazy"></div><figcaption><span>현장 계량</span><h3>무게는 눈앞에서 확인해요</h3><p>품목과 무게를 함께 확인하고 정산합니다.</p></figcaption></figure>
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/20260918_111806.jpg" alt="헌옷일번지 수거 차량의 측면과 적재 공간" width="4000" height="3000" loading="lazy"></div><figcaption><span>직접 방문</span><h3>익숙한 동네, 반가운 수거 차량</h3><p>약속한 일정에 헌옷일번지가 찾아갑니다.</p></figcaption></figure>
+        <figure class="gallery-card reveal"><div class="gallery-image"><img src="../images/pickup/Notes_260920_005247_8f4.jpg" alt="현관 안쪽에 가지런히 준비된 의류와 신발 봉투" width="1440" height="1920" loading="lazy" style="object-position:50% 60%"></div><figcaption><span>생활 속 정리</span><h3>모아두신 만큼, 공간은 넓어지고</h3><p>의류와 신발, 가방을 한 번에 상담해 보세요.</p></figcaption></figure>
+      </div>
+      <button class="mobile-more" type="button" aria-controls="pickupGalleryGrid" aria-expanded="false" data-more-label="수거 현장 사진 더 보기 +">수거 현장 사진 더 보기 +</button>
     </div></section>
 
     <section class="section faq-section" id="faq"><div class="container faq-grid">

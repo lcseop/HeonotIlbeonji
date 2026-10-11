@@ -16,6 +16,7 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
     const target = document.getElementById(link.getAttribute('href').slice(1));
     if (!target) return;
     event.preventDefault();
+    target.closest('.guide-card')?.dispatchEvent(new Event('pickup-guide-open'));
     target.scrollIntoView({ behavior: motionPreference.matches ? 'auto' : 'smooth' });
     if (link.classList.contains('skip-link')) {
       target.setAttribute('tabindex', '-1');
