@@ -268,6 +268,15 @@ public final class MainActivity extends Activity {
         brandParams.leftMargin = dp(10);
         header.addView(brand, brandParams);
         if (!session().isEmpty()) {
+            ImageView website = icon(R.drawable.ic_material_public, Color.WHITE, "홈페이지 이동");
+            website.setPadding(dp(12), dp(12), dp(12), dp(12));
+            website.setBackground(touchBackground(NAVY, 24));
+            website.setFocusable(true);
+            header.addView(website, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            website.setOnClickListener(view -> {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://1beonji.com/"))); }
+                catch (ActivityNotFoundException error) { Toast.makeText(this, "홈페이지를 열 브라우저를 찾지 못했습니다.", Toast.LENGTH_SHORT).show(); }
+            });
             ImageView settings = icon(R.drawable.ic_material_settings, Color.WHITE, "설정");
             settings.setPadding(dp(12), dp(12), dp(12), dp(12));
             settings.setBackground(touchBackground(NAVY, 24));
@@ -518,12 +527,19 @@ public final class MainActivity extends Activity {
             if (which == 0) requestAlerts();
             else if (which == 1) editServerUrl();
             else if (which == 2) updater.check(true);
-            else {
+            else confirmLogout();
+        }).setNegativeButton("닫기", null).show();
+    }
+
+    private void confirmLogout() {
+        new AlertDialog.Builder(this).setTitle("로그아웃할까요?")
+            .setMessage("다시 이용하려면 관리자 로그인이 필요합니다.")
+            .setNegativeButton("취소", null)
+            .setPositiveButton("로그아웃", (dialog, which) -> {
                 unregisterDevice();
                 saveSession("");
                 render();
-            }
-        }).setNegativeButton("닫기", null).show();
+            }).show();
     }
 
     private void refresh() {
