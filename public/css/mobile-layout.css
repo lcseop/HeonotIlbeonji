@@ -8,6 +8,14 @@
 .caption, .area-map-note { color: #43566a; }
 .guide-card-heading { color: #122b41; }
 .guide-title { width: 100%; }
+.guide-card-heading { cursor: pointer; }
+#guide-clothes .guide-title { color: #b53646; }
+#guide-shoes .guide-title { color: #2166ad; }
+#guide-household .guide-title { color: #147465; }
+#guide-books .guide-title { color: #995713; }
+#guide-appliances .guide-title { color: #6850a4; }
+#guide-collectibles .guide-title { color: #a33771; }
+.guide-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 4px; }
 .guide-toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; font: inherit; cursor: pointer; }
 .guide-toggle-icon { flex: 0 0 24px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #17324d; background: #e6edf3; }
 .guide-toggle-icon::before { content: '+'; font-size: 22px; line-height: 1; }
