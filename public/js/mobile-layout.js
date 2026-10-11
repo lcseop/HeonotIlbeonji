@@ -7,6 +7,7 @@
     const body = card.querySelector('.guide-body');
     if (!button || !body) return;
     button.setAttribute('aria-expanded', String(open));
+    button.disabled = !mobile.matches;
     body.hidden = !open;
     const hint = card.querySelector('.guide-badge');
     if (hint) hint.textContent = open ? '박스 눌러 접기' : '박스 눌러 상세 보기';
@@ -14,6 +15,7 @@
   const sync = () => cards.forEach(card => setOpen(card, !mobile.matches || chosen.get(card) === true));
   cards.forEach(card => {
     card.addEventListener('click', event => {
+      if (!mobile.matches) return;
       if (event.target.closest('.guide-body, a, input, select, textarea')) return;
       const open = card.querySelector('.guide-toggle').getAttribute('aria-expanded') !== 'true';
       chosen.set(card, open); setOpen(card, open);
