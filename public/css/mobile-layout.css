@@ -22,6 +22,9 @@
 .guide-toggle[aria-expanded='true'] .guide-toggle-icon::before { content: '−'; }
 .guide-body { color: #263e51; }
 .guide-badge { color: #334e65; background: #e8eef3; }
+.request-form .check-label { display: grid !important; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; }
+.request-form .check-label > span { min-width: 0; }
+.request-form .check-label input { width: 22px; height: 22px; margin: 3px 0 0; padding: 0; }
 .extra-services p:not(.section-label), .extra-services small { color: #fff; }
 .footer-brand > p, .footer-info, .footer-bottom, .light-logo small { color: #e0e8ef; }
 .footer-info b { color: #fff; }
@@ -128,8 +131,8 @@
   .request-form input::placeholder, .request-form textarea::placeholder { color: #596c7b; opacity: 1; }
   .request-form :is(input, select, textarea):focus { outline: 2px solid #17324d; outline-offset: 2px; }
   .pickup-form-guide, .form-notice, .form-phone { font-size: 14px; color: #43566a; }
-  .request-form .check-label { flex-wrap: wrap; column-gap: 8px; row-gap: 4px; font-size: 15px; color: #263e51; }
-  .request-form .check-label input { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: #17324d; }
+  .request-form .check-label { column-gap: 10px; font-size: 15px; color: #263e51; }
+  .request-form .check-label input { min-height: 22px; margin: 3px 0 0; accent-color: #17324d; }
   .check-label button { min-height: 44px; }
   .submit-button { min-height: 54px; justify-content: center; font-size: 17px; }
   .faq-grid > div:first-child > p:last-child { font-size: 15px; }
