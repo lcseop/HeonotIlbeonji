@@ -2,6 +2,16 @@
 :root { --ink: #122b41; --muted: #43566a; --line: #ccd6df; }
 [hidden] { display: none !important; }
 .site-header { background: #fff; backdrop-filter: none; }
+.header-actions, .social-links { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.social-links { gap: 4px; }
+.social-link { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 9px; }
+.blog-link { width: 76px; }
+.blog-link img { width: 64px; height: auto; display: block; }
+.cafe-link { width: 44px; }
+.cafe-icon { display: block; width: 40px; height: 40px; background: url('../images/naver-cafe-icons.png') -15px -15px / 248px 202px no-repeat; }
+.social-link:hover { background-color: #eef8f1; }
+.social-link:focus-visible { outline: 2px solid #147465; outline-offset: 2px; }
+@media (min-width: 761px) and (max-width: 1150px) { .desktop-nav { display: none; } }
 .hero h1 .hero-title { text-shadow: none; filter: none; transform: none; }
 .item-number { opacity: 1; color: #4c6072; }
 .featured .item-number, .featured p { color: #fff; opacity: 1; }
@@ -47,6 +57,10 @@
   .logo-image { width: 40px; height: 40px; }
   .logo small { font-size: 11px; color: #43566a; letter-spacing: .05em; }
   .header-cta { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; font-size: 14px; }
+  .header-actions .header-cta { display: none; }
+  .header-actions { gap: 0; }
+  .blog-link { width: 62px; }
+  .blog-link img { width: 54px; }
   .mobile-section-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); position: sticky; top: 64px; z-index: 45; padding: 0 16px; border-bottom: 1px solid #ccd6df; background: #fff; }
   .mobile-section-nav a { display: flex; align-items: center; justify-content: center; min-height: 46px; font-size: 15px; font-weight: 700; }
   .mobile-section-nav a + a { border-left: 1px solid #e4eaf0; }
