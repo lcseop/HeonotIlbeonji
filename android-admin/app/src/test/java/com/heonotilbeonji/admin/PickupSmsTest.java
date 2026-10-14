@@ -24,7 +24,7 @@ public class PickupSmsTest {
             Intent intent=PickupSms.draft(request("2026-01-05",method));
             assertEquals(Intent.ACTION_SENDTO,intent.getAction());
             assertEquals("smsto:01012345678",intent.getData().toString());
-            assertEquals("1월 5일 "+method+" 접수 완료되었습니다.",intent.getStringExtra("sms_body"));
+            assertEquals("1월 5일 (월요일) "+method+" 확인 및 접수되었습니다. 대단히 감사합니다~~\n코스 시간이 정해지면 문자 드리겠습니다.",intent.getStringExtra("sms_body"));
         }
     }
     @Test public void missingAndInvalidDatesOrMethodsAreNotUsedInConfirmation()throws Exception {
@@ -41,9 +41,22 @@ public class PickupSmsTest {
             Intent intent=shadowOf(activity).getNextStartedActivity();
             assertEquals(Intent.ACTION_SENDTO,intent.getAction());
             assertEquals("smsto:01012345678",intent.getData().toString());
-            assertEquals("10월 15일 비대면 수거 접수 완료되었습니다.",intent.getStringExtra("sms_body"));
+            assertEquals("10월 15일 (목요일) 비대면 수거 확인 및 접수되었습니다. 대단히 감사합니다~~\n코스 시간이 정해지면 문자 드리겠습니다.",intent.getStringExtra("sms_body"));
             assertEquals("new",item.getString("status"));
             dialog.dismiss();
+        }
+    }
+    @Test public void settingsIncludeLockStarInstructionsAndInstallationLink()throws Exception {
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()) {
+            var activity=controller.get();var help=MainActivity.class.getDeclaredMethod("showLockWidgetHelp");help.setAccessible(true);help.invoke(activity);
+            android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            android.widget.TextView message=dialog.findViewById(android.R.id.message);
+            assertTrue(message.getText().toString().contains("LockStar"));
+            assertTrue(message.getText().toString().contains("헌옷일번지 신청 목록"));
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();
+            shadowOf(android.os.Looper.getMainLooper()).idle();
+            Intent intent=shadowOf(activity).getNextStartedActivity();
+            assertEquals("https://galaxystore.samsung.com/detail/com.samsung.android.goodlock",intent.getData().toString());
         }
     }
 }

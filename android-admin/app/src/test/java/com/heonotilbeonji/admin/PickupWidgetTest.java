@@ -29,6 +29,15 @@ public class PickupWidgetTest {
         return new JSONObject().put("id", id).put("name", "고객 " + id).put("date", date).put("status", status)
             .put("phone", "01012345678").put("address", "경기도 김포시 고촌읍 전호로56번길 30, 1층 (우측)");
     }
+    @Test public void widgetDeclaresBothHomeAndLockScreenHostSupport() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        try(var parser = context.getResources().getXml(R.xml.pickup_widget_info)) {
+            while (parser.getEventType() != org.xmlpull.v1.XmlPullParser.START_TAG && parser.getEventType() != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) parser.next();
+            int category = parser.getAttributeIntValue("http://schemas.android.com/apk/res/android", "widgetCategory", 0);
+            assertTrue((category & android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN) != 0);
+            assertTrue((category & android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD) != 0);
+        }
+    }
     @Test public void widgetIncludesBothStatesAndSortsByFullPreferredDate() throws Exception {
         JSONArray input = new JSONArray().put(request("later", "2027-01-01", "new"))
             .put(request("done", "2026-10-01", "done"))

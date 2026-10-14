@@ -572,13 +572,14 @@ public final class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃", "사이드 패널"};
+        String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃", "사이드 패널", "잠금 화면 위젯"};
         new AlertDialog.Builder(this).setTitle("관리자 설정").setItems(choices, (dialog, which) -> {
             if (which == 0) requestAlerts();
             else if (which == 1) editServerUrl();
             else if (which == 2) updater.check(true);
             else if (which == 3) confirmLogout();
-            else showEdgeSettings();
+            else if (which == 4) showEdgeSettings();
+            else showLockWidgetHelp();
         }).setNegativeButton("닫기", null).show();
     }
 
@@ -595,6 +596,16 @@ public final class MainActivity extends Activity {
                     try { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
                     catch (ActivityNotFoundException error) { pendingEdgePermission = false; Toast.makeText(this, "휴대폰 설정에서 헌옷일번지의 ‘다른 앱 위에 표시’를 허용해 주세요.", Toast.LENGTH_LONG).show(); }
                 }
+            }).show();
+    }
+
+    private void showLockWidgetHelp() {
+        new AlertDialog.Builder(this).setTitle("잠금 화면 신청 위젯")
+            .setMessage("One UI 8.5에서는 굿락의 LockStar(락스타)에서 앱 위젯을 추가해 주세요.\n\n1. Galaxy Store에서 굿락과 LockStar를 설치하거나 최신 버전으로 업데이트합니다.\n\n2. 굿락 → LockStar에서 잠금 화면 편집으로 들어가 ‘앱 위젯’을 선택합니다. 잠금 화면을 길게 눌러 편집한 뒤 LockStar 메뉴로 들어갈 수도 있습니다.\n\n3. ‘헌옷일번지 신청 목록’을 선택하고 크기·위치를 정한 뒤 저장합니다.\n\n홈 화면과 같은 이름·날짜·주소·대면/비대면 아이콘을 표시합니다. 신청 상세 화면을 열 때는 잠금 해제가 필요합니다.\n\n메뉴 이름과 지원 여부는 설치된 LockStar 버전에 따라 다를 수 있습니다.")
+            .setNegativeButton("닫기", null)
+            .setPositiveButton("굿락 설치 페이지", (dialog, which) -> {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://galaxystore.samsung.com/detail/com.samsung.android.goodlock"))); }
+                catch (ActivityNotFoundException error) { Toast.makeText(this, "Galaxy Store에서 ‘굿락’을 검색해 주세요.", Toast.LENGTH_LONG).show(); }
             }).show();
     }
 
