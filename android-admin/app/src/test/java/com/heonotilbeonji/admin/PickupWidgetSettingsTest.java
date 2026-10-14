@@ -10,18 +10,41 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk={28,35})
 public class PickupWidgetSettingsTest {
+    @Test @Config(sdk=35,qualifiers="mdpi") @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void previewExpandsForNarrowScreensAndLargeFonts() {
+        Context context=RuntimeEnvironment.getApplication();
+        for(float scale:new float[]{1f,1.8f}) for(int width:new int[]{240,320}) {
+            Intent intent=new Intent(context,PickupWidgetConfigActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,12);
+            try(var controller=Robolectric.buildActivity(PickupWidgetConfigActivity.class,intent)) {
+                var activity=controller.get();
+                var config=new android.content.res.Configuration(activity.getResources().getConfiguration()); config.fontScale=scale;
+                activity.getResources().updateConfiguration(config,activity.getResources().getDisplayMetrics());
+                controller.setup();
+                ViewGroup content=activity.findViewById(android.R.id.content); View root=content.getChildAt(0);
+                root.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));
+                root.layout(0,0,width,800);
+                TextView sample=(TextView)PlannerInteractionTest.text(root,"수거 신청 미리보기\n26.10.15 (목)   ·   새 신청");
+                assertNotNull(sample);
+                View preview=(View)sample.getParent();
+                assertTrue("Preview clips text at width "+width+", font scale "+scale,sample.getBottom() <= preview.getHeight()-preview.getPaddingBottom());
+                assertEquals(sample.getText().length(),sample.getLayout().getLineEnd(sample.getLineCount()-1));
+            }
+        }
+    }
     @Test public void transparencyIsIndependentAndChangesOnlyTheBackground() {
         Context context=RuntimeEnvironment.getApplication();
         PickupWidgetSettings.save(context,10,75); PickupWidgetSettings.save(context,11,0);

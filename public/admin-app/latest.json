@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 26,
-  "versionName": "1.4.13",
-  "apkPath": "/admin-app/heonot-admin-1.4.13.apk",
-  "sha256": "761b7aaa6d7e9c8888d1838c85eeb797d8ba21c13f58e5e6a050e066a7ad9d83",
-  "size": 4240253,
-  "releaseNotes": "위젯 신청서에 전체 주소를 표시합니다. 긴 주소는 여러 줄로 표시되어 잘리지 않습니다."
+  "versionCode": 27,
+  "versionName": "1.4.14",
+  "apkPath": "/admin-app/heonot-admin-1.4.14.apk",
+  "sha256": "9575d33a5f346e7bebdc23f0db71e804041538239d3e51786deb825d5396415b",
+  "size": 4240252,
+  "releaseNotes": "위젯 설정 미리보기 높이를 내용에 맞게 조절하여 작은 화면이나 큰 글꼴에서 아래 글자가 잘리지 않도록 수정했습니다."
 }

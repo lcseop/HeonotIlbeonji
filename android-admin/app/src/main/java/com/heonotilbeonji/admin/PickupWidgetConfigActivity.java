@@ -34,7 +34,8 @@ public final class PickupWidgetConfigActivity extends Activity {
         preview.setBackground(background);
         TextView sampleTitle = text("헌옷일번지", 18, 0xff18334e); sampleTitle.setTypeface(null, 1); preview.addView(sampleTitle);
         TextView sample = text("수거 신청 미리보기\n26.10.15 (목)   ·   새 신청", 15, 0xff18334e); sample.setPadding(0, dp(20), 0, dp(12)); preview.addView(sample);
-        panel.addView(preview, new LinearLayout.LayoutParams(-1, dp(170)));
+        preview.setMinimumHeight(dp(170));
+        panel.addView(preview, new LinearLayout.LayoutParams(-1, -2));
         TextView value = text("", 18, 0xff18334e); value.setPadding(0, dp(26), 0, dp(12)); value.setTypeface(null, 1); panel.addView(value);
         slider = new SeekBar(this); slider.setMax(100); slider.setContentDescription("위젯 배경 투명도"); slider.setMinimumHeight(dp(52)); panel.addView(slider, new LinearLayout.LayoutParams(-1, dp(60)));
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
