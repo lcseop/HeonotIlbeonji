@@ -64,6 +64,23 @@ public class PickupWidgetTest {
         }
         assertNotNull(PickupWidgetProvider.views(context, 1));
     }
+    @Test public void methodIconsPersistAndDistinguishBothMethodsWithoutGuessingMissingValues() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        context.getSharedPreferences("admin", Context.MODE_PRIVATE).edit().putString("session", "widget-test").commit();
+        JSONArray input = new JSONArray();
+        for (String method : new String[]{"대면 수거", "비대면 수거", ""}) input.put(request(method, "2026-10-14", "new").put("pickupMethod", method));
+        PickupWidgetData.store(context, input);
+        JSONArray cached = PickupWidgetData.read(context);
+        for (int i = 0; i < cached.length(); i++) {
+            JSONObject item = cached.getJSONObject(i);
+            String method = item.getString("pickupMethod");
+            View row = PickupWidgetProvider.row(context, item).apply(context, new FrameLayout(context));
+            View icon = row.findViewById(R.id.widget_method_icon);
+            assertEquals(method.isEmpty() ? View.GONE : View.VISIBLE, icon.getVisibility());
+            assertEquals(method, icon.getContentDescription().toString());
+            if (!method.isEmpty()) assertTrue(row.getContentDescription().toString().contains(method));
+        }
+    }
     @Test public void hostedWidgetRendersCacheAndClearsAfterLogout() throws Exception {
         Context context = RuntimeEnvironment.getApplication();
         var manager = shadowOf(AppWidgetManager.getInstance(context));

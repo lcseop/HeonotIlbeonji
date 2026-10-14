@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 23,
-  "versionName": "1.4.10",
-  "apkPath": "/admin-app/heonot-admin-1.4.10.apk",
-  "sha256": "c4549c24080533a62029122803dbb171292aca711971e27d5b4cd28a07afecf9",
-  "size": 4223107,
-  "releaseNotes": "홈 화면 위젯 제목 아래 잘리던 설명 문구를 제거하고 제목을 중앙 정렬했습니다."
+  "versionCode": 24,
+  "versionName": "1.4.11",
+  "apkPath": "/admin-app/heonot-admin-1.4.11.apk",
+  "sha256": "8b06a517af75a29fff985900266d7d96b037fa7ae2a1ba294707a94f2684eb1b",
+  "size": 4223263,
+  "releaseNotes": "홈 화면 위젯에 앱 목록과 같은 대면·비대면 아이콘을 추가했습니다."
 }

@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.view.View;
 import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -57,7 +58,12 @@ public final class PickupWidgetProvider extends AppWidgetProvider {
         row.setTextViewText(R.id.widget_status, contacted ? "연락 완료" : "새 신청");
         row.setTextColor(R.id.widget_status, contacted ? 0xff2166ad : 0xffb53646);
         row.setImageViewResource(R.id.widget_state_icon, contacted ? R.drawable.ic_material_call : R.drawable.ic_material_schedule);
-        row.setContentDescription(R.id.widget_row, item.optString("name") + ", " + PickupWidgetData.dateLabel(item.optString("date")) + ", " + (contacted ? "연락 완료" : "새 신청"));
+        String method = item.optString("pickupMethod");
+        boolean knownMethod = "대면 수거".equals(method) || "비대면 수거".equals(method);
+        row.setViewVisibility(R.id.widget_method_icon, knownMethod ? View.VISIBLE : View.GONE);
+        row.setImageViewResource(R.id.widget_method_icon, "비대면 수거".equals(method) ? R.drawable.ic_material_person_off : R.drawable.ic_material_person);
+        row.setContentDescription(R.id.widget_method_icon, knownMethod ? method : "");
+        row.setContentDescription(R.id.widget_row, item.optString("name") + ", " + PickupWidgetData.dateLabel(item.optString("date")) + ", " + (contacted ? "연락 완료" : "새 신청") + (knownMethod ? ", " + method : ""));
         row.setOnClickFillInIntent(R.id.widget_row, new Intent().putExtra(REQUEST_ID, item.optString("id")));
         return row;
     }

@@ -49,7 +49,8 @@ final class PickupWidgetData {
             for (int i = 0; i < rows.length(); i++) try {
                 JSONObject row = rows.getJSONObject(i);
                 safe.put(new JSONObject().put("id", row.optString("id")).put("name", row.optString("name"))
-                    .put("date", row.optString("date")).put("status", row.optString("status")));
+                    .put("date", row.optString("date")).put("status", row.optString("status"))
+                    .put("pickupMethod", row.optString("pickupMethod")));
             } catch (Exception ignored) { }
         }
         prefs(context).edit().putString("rows", safe.toString()).putLong("updated", System.currentTimeMillis())
