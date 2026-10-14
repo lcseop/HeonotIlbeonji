@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 28,
-  "versionName": "1.4.15",
-  "apkPath": "/admin-app/heonot-admin-1.4.15.apk",
-  "sha256": "ffe2e38e7ace3d709fd394432695ca55b0ca9665804e21bb8476925d6acb6f5b",
-  "size": 4347123,
-  "releaseNotes": "다른 앱 위에서 오른쪽 손잡이를 끌어 신청 목록을 여는 사이드 패널을 추가했습니다. 설정에서 켜고 끌 수 있으며 처음에는 다른 앱 위에 표시 권한을 허용해 주세요."
+  "versionCode": 29,
+  "versionName": "1.4.16",
+  "apkPath": "/admin-app/heonot-admin-1.4.16.apk",
+  "sha256": "d8258c1f24caa03fc146ccf8788c9ba3e32683350cb5908a95462af7539a4f5b",
+  "size": 4241284,
+  "releaseNotes": "신청 상세 화면에 문자 보내기 아이콘을 추가했습니다. 해당 번호로 메시지 앱을 열고 희망 날짜와 대면·비대면 방식에 맞춘 수거 접수 완료 문구를 미리 입력합니다."
 }

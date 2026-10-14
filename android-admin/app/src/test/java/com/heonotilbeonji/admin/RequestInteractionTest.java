@@ -66,7 +66,7 @@ public class RequestInteractionTest {
                     R.drawable.ic_material_location_on, R.drawable.ic_material_note_add,
                     R.drawable.ic_material_person, R.drawable.ic_material_person_add,
                     R.drawable.ic_material_person_off, R.drawable.ic_material_schedule,
-                    R.drawable.ic_material_settings, R.drawable.ic_material_contacts,
+                    R.drawable.ic_material_settings, R.drawable.ic_material_contacts, R.drawable.ic_material_sms,
                     R.drawable.ic_material_history, R.drawable.ic_material_calendar_month,
                     R.drawable.ic_material_chevron_left, R.drawable.ic_material_edit};
             for (int icon : icons) assertNotNull(controller.get().getDrawable(icon));
@@ -102,19 +102,20 @@ public class RequestInteractionTest {
             View firstAction = PlannerInteractionTest.description(decor, "전화");
             assertNotNull(firstAction);
             ViewGroup actions = (ViewGroup) firstAction.getParent();
-            assertEquals(6, actions.getChildCount());
+            assertEquals(7, actions.getChildCount());
             int width = Math.round(272 * activity.getResources().getDisplayMetrics().density);
             actions.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.AT_MOST));
             actions.layout(0, 0, width, actions.getMeasuredHeight());
             int measuredWidth = firstAction.getMeasuredWidth(), measuredHeight = firstAction.getMeasuredHeight();
-            for (String title : new String[]{"전화", "연락처 추가", "메모 작성", "연락 완료", "처리 완료", "삭제"}) {
+            for (String title : new String[]{"전화", "문자 보내기", "연락처 추가", "메모 작성", "연락 완료", "처리 완료", "삭제"}) {
                 View action = PlannerInteractionTest.description(decor, title);
                 assertNotNull(title, action); assertSame(actions, action.getParent());
                 assertEquals(title, measuredHeight, action.getMeasuredHeight());
                 assertTrue(title, Math.abs(measuredWidth - action.getMeasuredWidth()) <= 2);
                 assertEquals(title, 0, action.getLayoutParams().width);
                 assertEquals(title, 1, ((ViewGroup) action).getChildCount());
+                assertTrue(title, ((ViewGroup) action).getChildAt(0).getMeasuredWidth() <= action.getMeasuredWidth() - action.getPaddingLeft() - action.getPaddingRight());
                 assertNull(text(action, title));
             }
             dialog.dismiss();

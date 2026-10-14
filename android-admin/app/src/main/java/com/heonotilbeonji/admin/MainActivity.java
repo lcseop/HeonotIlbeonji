@@ -1141,6 +1141,7 @@ public final class MainActivity extends Activity {
         LinearLayout contactActions = actions;
         LinearLayout statusActions = actions;
         LinearLayout dial = detailAction(contactActions, "전화", R.drawable.ic_material_call, Color.WHITE, CORAL);
+        LinearLayout sms = detailAction(contactActions, "문자 보내기", R.drawable.ic_material_sms, Color.WHITE, BLUE);
         LinearLayout contact = detailAction(contactActions, "연락처 추가", R.drawable.ic_material_person_add, Color.WHITE, BLUE);
         LinearLayout addMemo = detailAction(contactActions, "메모 작성", R.drawable.ic_material_note_add, NAVY, SURFACE);
         LinearLayout contacted = detailAction(statusActions, "연락 완료", R.drawable.ic_material_contacts, BLUE,
@@ -1166,6 +1167,11 @@ public final class MainActivity extends Activity {
             intent.putExtra(ContactsContract.Intents.Insert.PHONE, phone);
             try { startActivity(intent); }
             catch (ActivityNotFoundException error) { Toast.makeText(this, "연락처 앱을 찾지 못했습니다.", Toast.LENGTH_SHORT).show(); }
+        });
+        sms.setOnClickListener(view -> {
+            try { startActivity(PickupSms.draft(item)); }
+            catch (IllegalArgumentException error) { Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show(); }
+            catch (ActivityNotFoundException error) { Toast.makeText(this, "문자 메시지 앱을 찾지 못했습니다.", Toast.LENGTH_LONG).show(); }
         });
         contacted.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "contacted"); });
         done.setOnClickListener(view -> { dialog.dismiss(); updateRequest(item.optString("id"), "done"); });
