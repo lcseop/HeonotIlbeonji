@@ -1,6 +1,13 @@
 /* Readable text and clear collection categories, with progressive mobile disclosure. */
 :root { --ink: #122b41; --muted: #43566a; --line: #ccd6df; }
 [hidden] { display: none !important; }
+.pickup-date-control { display: block; position: relative; }
+.pickup-date-value { display: none; }
+.date-ready .pickup-date-value { display: block; position: absolute; left: 12px; right: 36px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 16px; font-weight: 400; color: #122b41; white-space: nowrap; }
+.date-ready .pickup-date-value.is-placeholder { color: #596c7b; }
+.request-form .date-ready input { color: transparent; caret-color: transparent; width: 100%; }
+.date-ready input::-webkit-datetime-edit { opacity: 0; }
+@media (max-width: 520px) { .request-form .form-row:has(.pickup-date-control) { grid-template-columns: 1fr; gap: 0; } }
 .site-header { background: #fff; backdrop-filter: none; }
 .header-actions, .social-links { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .social-links { gap: 4px; }

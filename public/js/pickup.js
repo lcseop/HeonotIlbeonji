@@ -4,6 +4,20 @@
   const notice = document.querySelector('#formNotice');
   const button = form.querySelector('[type="submit"]');
   const date = form.elements.date;
+  const dateValue = form.querySelector('.pickup-date-value');
+  function updateDateDisplay() {
+    if (!dateValue) return;
+    const value = date.value;
+    const parsed = new Date(`${value}T00:00:00Z`);
+    const valid = /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    dateValue.textContent = valid ? `${value} (${'일월화수목금토'[parsed.getUTCDay()]})` : '날짜 선택';
+    dateValue.classList.toggle('is-placeholder', !valid);
+    date.parentElement.classList.add('date-ready');
+  }
+  date.addEventListener('input', updateDateDisplay);
+  date.addEventListener('change', updateDateDisplay);
+  form.addEventListener('reset', () => setTimeout(updateDateDisplay, 0));
+  updateDateDisplay();
   let enabled = false;
   let pending = false;
   let settled = false;

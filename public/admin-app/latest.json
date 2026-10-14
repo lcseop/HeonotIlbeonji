@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 31,
-  "versionName": "1.4.18",
-  "apkPath": "/admin-app/heonot-admin-1.4.18.apk",
-  "sha256": "93b3ea98ed12b4e3d8d06a6850dc5930ac50d0b07420fdbae617f934b67e5058",
-  "size": 4241282,
-  "releaseNotes": "수거 확인 문자 문구를 요청하신 내용으로 변경했습니다. 날짜와 요일을 자동 입력하며 대면 신청에서는 비대면 문구를 제외합니다."
+  "versionCode": 32,
+  "versionName": "1.4.19",
+  "apkPath": "/admin-app/heonot-admin-1.4.19.apk",
+  "sha256": "d45a612fbacf5df23a283b51e795c83aafae7c9bf19ef2485361d02e6761353b",
+  "size": 4372053,
+  "releaseNotes": "금·은·동·스텐·알루미늄 시세 화면 추가, 홈페이지 희망 날짜 요일 표시 수정"
 }

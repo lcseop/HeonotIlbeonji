@@ -12,7 +12,7 @@ async function page(response, tracking = 'available') {
   const button = {};
   const form = {
     elements: { date: { value: '2026-10-08', addEventListener() {}, focus() {} }, consent: { checked: true } },
-    querySelector: () => button, addEventListener: (name, fn) => { listeners[name] = fn; },
+    querySelector: selector => selector === '[type="submit"]' ? button : null, addEventListener: (name, fn) => { listeners[name] = fn; },
     reportValidity: () => true, setAttribute() {}, reset() {},
   };
   const window = { turnstile: {

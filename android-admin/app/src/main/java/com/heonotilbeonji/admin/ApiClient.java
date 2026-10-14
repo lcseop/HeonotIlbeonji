@@ -25,7 +25,7 @@ final class ApiClient {
         HttpURLConnection connection = (HttpURLConnection) new URL(base + path).openConnection();
         connection.setRequestMethod(method);
         connection.setConnectTimeout(8000);
-        connection.setReadTimeout(12000);
+        connection.setReadTimeout(path.equals("/api/admin/native-metal-prices") ? 20000 : 12000);
         connection.setRequestProperty("Accept", "application/json");
         if (token != null && !token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
         if (payload != null) {

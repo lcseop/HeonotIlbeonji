@@ -491,8 +491,8 @@ public final class MainActivity extends Activity {
         LinearLayout navigation = new LinearLayout(this);
         navigation.setPadding(dp(8), dp(5), dp(8), dp(5)); navigation.setBackgroundColor(Color.WHITE);
         navigation.setContentDescription("화면 이동 메뉴");
-        String[] titles = {"신청서", "달력", "메모", "통계"};
-        int[] icons = {R.drawable.ic_material_inbox, R.drawable.ic_material_calendar_month, R.drawable.ic_material_notes, R.drawable.ic_material_bar_chart};
+        String[] titles = {"신청서", "달력", "메모", "통계", "시세"};
+        int[] icons = {R.drawable.ic_material_inbox, R.drawable.ic_material_calendar_month, R.drawable.ic_material_notes, R.drawable.ic_material_bar_chart, R.drawable.ic_material_trending_up};
         int active = statsPage ? 3 : memoPage ? 2 : calendarPage ? 1 : 0;
         for (int i = 0; i < titles.length; i++) {
             final int page = i;
@@ -505,6 +505,7 @@ public final class MainActivity extends Activity {
             tabTitle.setGravity(Gravity.CENTER); tab.addView(tabTitle, margins(4, 0));
             navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(62), 1));
             tab.setOnClickListener(v -> {
+                if (page == 4) { startActivity(new Intent(this, MetalPricesActivity.class)); return; }
                 if (page == active) {
                     if (list != null) ((ScrollView) list.getParent()).smoothScrollTo(0, 0);
                     return;
