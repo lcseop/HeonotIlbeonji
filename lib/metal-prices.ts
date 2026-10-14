@@ -43,7 +43,7 @@ export function parseScrapPrices(html: string, url: string): MetalFeed {
     basis: '스크랩 매입 고시가 · 도착도 · 부가세 별도 · 운송/상차 조건에 따라 변동', quotes };
 }
 async function download(url: string, method = 'GET') {
-  const response = await fetch(url, { method, signal: AbortSignal.timeout(7000), headers: { 'Accept': '*/*' } });
+  const response = await fetch(url, { method, signal: AbortSignal.timeout(7000), headers: { 'Accept': '*/*', 'User-Agent': 'HeonotIlbeonji/1.4.19 (https://1beonji.com)', 'Referer': new URL(url).origin + '/' } });
   if (!response.ok) throw new Error(`source HTTP ${response.status}`);
   return response;
 }
