@@ -44,7 +44,7 @@ export function parseScrapPrices(html: string, url: string): MetalFeed {
 }
 async function download(url: string, method = 'GET') {
   const response = await fetch(url, { method, signal: AbortSignal.timeout(7000), headers: { 'Accept': '*/*' } });
-  if (!response.ok) throw new Error('source unavailable');
+  if (!response.ok) throw new Error(`source HTTP ${response.status}`);
   return response;
 }
 export async function getMetalPrices(db: D1Database) {
@@ -62,9 +62,9 @@ export async function getMetalPrices(db: D1Database) {
       await db.prepare('INSERT INTO metal_price_cache (source, content, fetched_at) VALUES (?, ?, ?) ON CONFLICT(source) DO UPDATE SET content=excluded.content, fetched_at=excluded.fetched_at')
         .bind(loader.key, JSON.stringify(feed), now).run();
       return { ...feed, fetchedAt: now, stale: false };
-    } catch {
+    } catch (issue) {
       return { ...(previous || { source: loader.source, url: loader.url, asOf: '', basis: '', quotes: [] }),
-        fetchedAt: cache?.fetched_at || 0, stale: true, error: previous ? '조회 실패 · 이전에 확인한 가격입니다' : '시세를 불러오지 못했습니다' };
+        fetchedAt: cache?.fetched_at || 0, stale: true, sourceError: issue instanceof Error ? issue.message.slice(0, 160) : 'source error', error: previous ? '조회 실패 · 이전에 확인한 가격입니다' : '시세를 불러오지 못했습니다' };
     }
   }));
   return { feeds, checkedAt: Date.now() };
