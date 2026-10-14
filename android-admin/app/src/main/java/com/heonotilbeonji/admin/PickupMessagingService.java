@@ -18,6 +18,7 @@ public final class PickupMessagingService extends FirebaseMessagingService {
 
     @Override public void onMessageReceived(RemoteMessage message) {
         if (!"pickup_request".equals(message.getData().get("type"))) return;
+        PickupWidgetProvider.requestRefresh(this);
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;

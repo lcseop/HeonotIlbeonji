@@ -70,6 +70,7 @@ public final class MainActivity extends Activity {
     private TextView notice;
     private TextView count;
     private JSONArray requests = new JSONArray();
+    private String pendingWidgetRequestId = "";
     private JSONArray memos = new JSONArray();
     private boolean memoPage = false;
     private boolean calendarPage = false;
@@ -169,6 +170,8 @@ public final class MainActivity extends Activity {
             calendarMonth.setTimeInMillis(state.getLong("calendarMonth", calendarMonth.getTimeInMillis()));
             menuCollapsed = state.getBoolean("menuCollapsed");
         }
+        if (state != null) pendingWidgetRequestId = state.getString("pendingWidgetRequestId", "");
+        receiveWidgetIntent(getIntent());
         render();
         if (state != null && state.containsKey("requestDraft") && !session().isEmpty()) {
             try { editRequest(new JSONObject(state.getString("requestDraft"))); contactEditor = requestEditor; }
@@ -184,6 +187,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
+        state.putString("pendingWidgetRequestId", pendingWidgetRequestId);
         state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
         state.putBoolean("statsPage", statsPage);
         state.putBoolean("websiteStatsView", websiteStatsView);
@@ -209,7 +213,41 @@ public final class MainActivity extends Activity {
     }
 
     private String session() { return getSharedPreferences("admin", MODE_PRIVATE).getString("session", ""); }
-    private void saveSession(String token) { getSharedPreferences("admin", MODE_PRIVATE).edit().putString("session", token).apply(); }
+    private void saveSession(String token) {
+        String previous = session();
+        getSharedPreferences("admin", MODE_PRIVATE).edit().putString("session", token).apply();
+        if (!token.equals(previous) || token.isEmpty()) PickupWidgetData.clear(this);
+        if (!token.isEmpty()) PickupWidgetProvider.requestRefresh(this);
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent); setIntent(intent);
+        if (receiveWidgetIntent(intent)) render();
+    }
+
+    private boolean receiveWidgetIntent(Intent intent) {
+        if (intent == null) return false;
+        if (PickupWidgetProvider.OPEN_HOME.equals(intent.getAction())) {
+            calendarPage = false; memoPage = false; statsPage = false; pendingWidgetRequestId = "";
+            return true;
+        }
+        if (!intent.hasExtra(PickupWidgetProvider.REQUEST_ID)) return false;
+        pendingWidgetRequestId = intent.getStringExtra(PickupWidgetProvider.REQUEST_ID);
+        if (pendingWidgetRequestId == null) pendingWidgetRequestId = "";
+        intent.removeExtra(PickupWidgetProvider.REQUEST_ID);
+        calendarPage = false; memoPage = false; statsPage = false;
+        return true;
+    }
+
+    private void openWidgetRequest() {
+        if (pendingWidgetRequestId.isEmpty() || session().isEmpty()) return;
+        String id = pendingWidgetRequestId; pendingWidgetRequestId = "";
+        for (int i = 0; i < requests.length(); i++) {
+            JSONObject item = requests.optJSONObject(i);
+            if (item != null && id.equals(item.optString("id"))) { showDetail(item); return; }
+        }
+        Toast.makeText(this, "신청서를 찾을 수 없습니다. 삭제됐을 수 있어요.", Toast.LENGTH_LONG).show();
+    }
     private String serverUrl() { return getSharedPreferences("admin", MODE_PRIVATE).getString("api_base_url", BuildConfig.API_BASE_URL); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
@@ -579,7 +617,8 @@ public final class MainActivity extends Activity {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-memos", null, session()).getJSONArray("memos");
                     JSONArray loadedRequests = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
                     runOnUiThread(() -> {
-                        if (revision != dataRevision) return; memos = loaded; requests = loadedRequests; if (memoPage) renderMemos(); });
+                        if (revision != dataRevision) return; memos = loaded; requests = loadedRequests;
+                        PickupWidgetData.store(this, requests); openWidgetRequest(); if (memoPage) renderMemos(); });
                 } else {
                     JSONArray loaded = ApiClient.request(this, "GET", "/api/admin/native-requests", null, session()).getJSONArray("requests");
                     JSONArray notes = loadCalendar ? ApiClient.request(this, "GET", "/api/admin/native-day-memos", null, session()).getJSONArray("memos") : null;
@@ -591,6 +630,7 @@ public final class MainActivity extends Activity {
                     final JSONArray loadedFinances = finances; final String financialError = loadError;
                     runOnUiThread(() -> {
                         if (revision != dataRevision) return; requests = loaded; if (notes != null) dayMemos = notes;
+                        PickupWidgetData.store(this, requests); openWidgetRequest();
                         if (loadCalendar && month.equals(financeMonth())) {
                             financeError = financialError;
                             if (loadedFinances != null) { dayFinances = loadedFinances; financeLoadedMonth = month; }
@@ -625,6 +665,7 @@ public final class MainActivity extends Activity {
 
     private void applySavedRequest(JSONObject data) {
         dataRevision++; requests = RequestCache.apply(requests, data);
+        PickupWidgetData.store(this, requests);
         if (memoPage) renderMemos(); else if (!statsPage) renderRequests();
     }
 
@@ -1112,6 +1153,7 @@ public final class MainActivity extends Activity {
                                     new JSONObject().put("id", item.optString("id")), session());
                             runOnUiThread(() -> {
                                 dataRevision++; requests = RequestCache.remove(requests, item.optString("id"));
+                                PickupWidgetData.store(this, requests);
                                 if (memoPage) renderMemos(); else if (!statsPage) renderRequests();
                             });
                         } catch (Exception error) { showError(error); }
@@ -1320,6 +1362,7 @@ public final class MainActivity extends Activity {
                     }
                     getSharedPreferences("admin", MODE_PRIVATE).edit()
                             .putString("api_base_url", value).remove("session").apply();
+                    PickupWidgetData.clear(this);
                     render();
                     Toast.makeText(this, "서버 주소를 저장했습니다. 다시 로그인해 주세요.", Toast.LENGTH_SHORT).show();
                 }).show();
