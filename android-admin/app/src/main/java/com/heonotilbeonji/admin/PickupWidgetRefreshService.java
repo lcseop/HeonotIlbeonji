@@ -16,7 +16,7 @@ public final class PickupWidgetRefreshService extends JobService {
             String server = getSharedPreferences("admin", Context.MODE_PRIVATE).getString("api_base_url", BuildConfig.API_BASE_URL);
             long revision = PickupWidgetData.prefs(this).getLong("revision", 0);
             try {
-                if (token.isEmpty() || PickupWidgetProvider.widgetIds(this).length == 0) { PickupWidgetProvider.stopAutomaticRefresh(this); PickupWidgetData.clear(this); return; }
+                if (token.isEmpty() || !PickupWidgetProvider.hasConsumers(this)) { PickupWidgetProvider.stopAutomaticRefresh(this); PickupWidgetData.clear(this); return; }
                 PickupWidgetProvider.ensureAutomaticRefresh(this);
                 JSONArray rows = ApiClient.request(this, "GET", "/api/admin/native-requests", null, token).getJSONArray("requests");
                 synchronized (PickupWidgetData.class) {

@@ -36,14 +36,15 @@ public final class PickupWidgetProvider extends AppWidgetProvider {
     }
     @Override public void onDeleted(Context context, int[] ids) {
         for (int id : ids) PickupWidgetSettings.remove(context, id);
-        if (widgetIds(context).length == 0) {
+        if (!hasConsumers(context)) {
             stopAutomaticRefresh(context);
         }
     }
-    @Override public void onDisabled(Context context) { stopAutomaticRefresh(context); }
+    @Override public void onDisabled(Context context) { if (!hasConsumers(context)) stopAutomaticRefresh(context); }
     static int[] widgetIds(Context context) { return AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, PickupWidgetProvider.class)); }
+    static boolean hasConsumers(Context context) { return widgetIds(context).length > 0 || PickupEdgeService.available(context); }
     static void requestRefresh(Context context) {
-        if (widgetIds(context).length == 0) return;
+        if (!hasConsumers(context)) return;
         if (context.getSharedPreferences("admin", Context.MODE_PRIVATE).getString("session", "").isEmpty()) { stopAutomaticRefresh(context); PickupWidgetData.clear(context); return; }
         ensureAutomaticRefresh(context);
         JobScheduler scheduler = context.getSystemService(JobScheduler.class);

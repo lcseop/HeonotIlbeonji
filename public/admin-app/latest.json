@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 27,
-  "versionName": "1.4.14",
-  "apkPath": "/admin-app/heonot-admin-1.4.14.apk",
-  "sha256": "9575d33a5f346e7bebdc23f0db71e804041538239d3e51786deb825d5396415b",
-  "size": 4240252,
-  "releaseNotes": "위젯 설정 미리보기 높이를 내용에 맞게 조절하여 작은 화면이나 큰 글꼴에서 아래 글자가 잘리지 않도록 수정했습니다."
+  "versionCode": 28,
+  "versionName": "1.4.15",
+  "apkPath": "/admin-app/heonot-admin-1.4.15.apk",
+  "sha256": "ffe2e38e7ace3d709fd394432695ca55b0ca9665804e21bb8476925d6acb6f5b",
+  "size": 4347123,
+  "releaseNotes": "다른 앱 위에서 오른쪽 손잡이를 끌어 신청 목록을 여는 사이드 패널을 추가했습니다. 설정에서 켜고 끌 수 있으며 처음에는 다른 앱 위에 표시 권한을 허용해 주세요."
 }

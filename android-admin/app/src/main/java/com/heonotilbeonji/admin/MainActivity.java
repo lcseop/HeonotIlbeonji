@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private TextView count;
     private JSONArray requests = new JSONArray();
     private String pendingWidgetRequestId = "";
+    private boolean pendingEdgePermission;
     private JSONArray memos = new JSONArray();
     private boolean memoPage = false;
     private boolean calendarPage = false;
@@ -170,7 +171,10 @@ public final class MainActivity extends Activity {
             calendarMonth.setTimeInMillis(state.getLong("calendarMonth", calendarMonth.getTimeInMillis()));
             menuCollapsed = state.getBoolean("menuCollapsed");
         }
-        if (state != null) pendingWidgetRequestId = state.getString("pendingWidgetRequestId", "");
+        if (state != null) {
+            pendingWidgetRequestId = state.getString("pendingWidgetRequestId", "");
+            pendingEdgePermission = state.getBoolean("pendingEdgePermission");
+        }
         receiveWidgetIntent(getIntent());
         render();
         if (state != null && state.containsKey("requestDraft") && !session().isEmpty()) {
@@ -188,6 +192,7 @@ public final class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
         state.putString("pendingWidgetRequestId", pendingWidgetRequestId);
+        state.putBoolean("pendingEdgePermission", pendingEdgePermission);
         state.putBoolean("calendarPage", calendarPage); state.putBoolean("memoPage", memoPage);
         state.putBoolean("statsPage", statsPage);
         state.putBoolean("websiteStatsView", websiteStatsView);
@@ -200,6 +205,12 @@ public final class MainActivity extends Activity {
 
     @Override public void onResume() {
         super.onResume();
+        if (pendingEdgePermission) {
+            pendingEdgePermission = false;
+            if (android.provider.Settings.canDrawOverlays(this) && !session().isEmpty()) PickupEdgeService.enable(this);
+            else Toast.makeText(this, "사이드 패널에는 ‘다른 앱 위에 표시’ 허용이 필요합니다.", Toast.LENGTH_LONG).show();
+        }
+        PickupEdgeService.resume(this);
         if (updater != null) updater.resume(!session().isEmpty());
         if (list != null && !session().isEmpty()) refresh();
     }
@@ -218,6 +229,7 @@ public final class MainActivity extends Activity {
         getSharedPreferences("admin", MODE_PRIVATE).edit().putString("session", token).apply();
         if (!token.equals(previous) || token.isEmpty()) PickupWidgetData.clear(this);
         if (!token.isEmpty()) PickupWidgetProvider.requestRefresh(this);
+        if (token.isEmpty()) PickupEdgeService.stop(this, false); else PickupEdgeService.resume(this);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -560,13 +572,30 @@ public final class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃"};
+        String[] choices = {"알림 설정", "서버 주소 설정", "업데이트 확인", "로그아웃", "사이드 패널"};
         new AlertDialog.Builder(this).setTitle("관리자 설정").setItems(choices, (dialog, which) -> {
             if (which == 0) requestAlerts();
             else if (which == 1) editServerUrl();
             else if (which == 2) updater.check(true);
-            else confirmLogout();
+            else if (which == 3) confirmLogout();
+            else showEdgeSettings();
         }).setNegativeButton("닫기", null).show();
+    }
+
+    private void showEdgeSettings() {
+        boolean enabled = PickupEdgeService.available(this);
+        new AlertDialog.Builder(this).setTitle("수거 신청 사이드 패널")
+            .setMessage("오른쪽 손잡이를 왼쪽으로 끌거나 누르면 신청 목록이 열립니다. 손잡이는 위아래로 옮길 수 있어요.\n\n처음 켤 때 ‘다른 앱 위에 표시’를 허용해 주세요. 패널이 켜진 동안 알림이 표시되며, 알림에서도 끌 수 있습니다.")
+            .setNegativeButton("닫기", null)
+            .setPositiveButton(enabled ? "패널 끄기" : "패널 켜기", (dialog, which) -> {
+                if (enabled) { PickupEdgeService.stop(this, true); return; }
+                if (android.provider.Settings.canDrawOverlays(this)) PickupEdgeService.enable(this);
+                else {
+                    pendingEdgePermission = true;
+                    try { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
+                    catch (ActivityNotFoundException error) { pendingEdgePermission = false; Toast.makeText(this, "휴대폰 설정에서 헌옷일번지의 ‘다른 앱 위에 표시’를 허용해 주세요.", Toast.LENGTH_LONG).show(); }
+                }
+            }).show();
     }
 
     private void confirmLogout() {
@@ -1363,6 +1392,7 @@ public final class MainActivity extends Activity {
                     getSharedPreferences("admin", MODE_PRIVATE).edit()
                             .putString("api_base_url", value).remove("session").apply();
                     PickupWidgetData.clear(this);
+                    PickupEdgeService.stop(this, false);
                     render();
                     Toast.makeText(this, "서버 주소를 저장했습니다. 다시 로그인해 주세요.", Toast.LENGTH_SHORT).show();
                 }).show();
