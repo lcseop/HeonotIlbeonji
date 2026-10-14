@@ -22,6 +22,34 @@ export function parseGoldPrices(input: unknown): MetalFeed {
       { name: '은', grade: '자사 실버바', price: positive(data.p_silver), unit: '원 / 1돈 (3.75g)' },
     ] };
 }
+export function parseKGoldPrices(html: string): MetalFeed {
+  // Decode public server-rendered JSON as data; never execute the site's scripts.
+  let payload = '';
+  for (const match of html.matchAll(/self\.__next_f\.push\((\[[\s\S]*?\])\)<\/script>/g)) {
+    const chunk = JSON.parse(match[1]);
+    if (typeof chunk[1] === 'string') payload += chunk[1];
+  }
+  const start = payload.indexOf('"board":{');
+  if (start < 0) throw new Error('missing precious metal board');
+  const from = start + '"board":'.length;
+  let depth = 0, quoted = false, escaped = false, end = -1;
+  for (let i = from; i < payload.length; i++) {
+    const char = payload[i];
+    if (quoted) { if (escaped) escaped = false; else if (char === '\\') escaped = true; else if (char === '"') quoted = false; }
+    else if (char === '"') quoted = true;
+    else if (char === '{') depth++;
+    else if (char === '}' && --depth === 0) { end = i + 1; break; }
+  }
+  if (end < 0) throw new Error('invalid precious metal board');
+  const board = JSON.parse(payload.slice(from, end));
+  if (JSON.stringify(board.columns) !== JSON.stringify(['순금', '18K', '14K', '백금', '은']) || !Array.isArray(board.sellRow)) throw new Error('changed precious metal columns');
+  const price = (index: number) => positive(board.sellRow[index]?.text?.replaceAll(',', ''));
+  return { source: 'K-금은거래소', url: 'https://www.k-goldsilver.com/', asOf: date(board.pricedOn),
+    basis: '내가 팔 때 · 금은 골드바/덩어리(검인), 은은 그래뉼 기준', quotes: [
+      { name: '금', grade: '순금 · 골드바/덩어리(검인)', price: price(0), unit: '원 / 1돈 (3.75g)' },
+      { name: '은', grade: '그래뉼 (순은)', price: price(4), unit: '원 / 1돈 (3.75g)' },
+    ] };
+}
 export function scrapBoardUrl(html: string) {
   const path = html.match(/https:\/\/allmetal\.co\.kr\/bbs\/board\.php\?bo_table=price(?:&amp;|&)wr_id=\d+/)?.[0];
   if (!path) throw new Error('missing latest board');
@@ -50,7 +78,10 @@ async function download(url: string, method = 'GET') {
 export async function getMetalPrices(db: D1Database) {
   await db.prepare('CREATE TABLE IF NOT EXISTS metal_price_cache (source TEXT PRIMARY KEY, content TEXT NOT NULL, fetched_at INTEGER NOT NULL)').run();
   const loaders = [
-    { key: 'gold', source: '한국금거래소', url: GOLD + 'price/gold', load: async () => parseGoldPrices(await (await download(GOLD + 'api/main', 'POST')).json()) },
+    { key: 'gold', source: '한국금거래소', url: GOLD + 'price/gold', load: async () => {
+      try { return parseGoldPrices(await (await download(GOLD + 'api/main', 'POST')).json()); }
+      catch { return parseKGoldPrices(await (await download('https://www.k-goldsilver.com/')).text()); }
+    } },
     { key: 'scrap', source: '올메탈', url: SCRAP, load: async () => { const url = scrapBoardUrl(await (await download(SCRAP)).text()); return parseScrapPrices(await (await download(url)).text(), url); } },
   ];
   const feeds = await Promise.all(loaders.map(async loader => {
