@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 25,
-  "versionName": "1.4.12",
-  "apkPath": "/admin-app/heonot-admin-1.4.12.apk",
-  "sha256": "be3d9805b6efb41b7bebaf8a605a8a97aed09ee235db71621742e1fdb8bfef27",
-  "size": 4240130,
-  "releaseNotes": "위젯별 배경 투명도 설정을 추가했습니다. 5분 간격을 목표로 자동 갱신하며 절전·네트워크 상태에 따라 지연될 수 있습니다."
+  "versionCode": 26,
+  "versionName": "1.4.13",
+  "apkPath": "/admin-app/heonot-admin-1.4.13.apk",
+  "sha256": "761b7aaa6d7e9c8888d1838c85eeb797d8ba21c13f58e5e6a050e066a7ad9d83",
+  "size": 4240253,
+  "releaseNotes": "위젯 신청서에 전체 주소를 표시합니다. 긴 주소는 여러 줄로 표시되어 잘리지 않습니다."
 }

@@ -81,6 +81,8 @@ public final class PickupWidgetProvider extends AppWidgetProvider {
         boolean contacted = "contacted".equals(item.optString("status"));
         row.setTextViewText(R.id.widget_name, item.optString("name", "신청자"));
         row.setTextViewText(R.id.widget_date, PickupWidgetData.dateLabel(item.optString("date")));
+        String address = item.optString("address").trim();
+        row.setTextViewText(R.id.widget_address, address.isEmpty() ? "주소 미기재" : address);
         row.setTextViewText(R.id.widget_status, contacted ? "연락 완료" : "새 신청");
         row.setTextColor(R.id.widget_status, contacted ? 0xff2166ad : 0xffb53646);
         row.setImageViewResource(R.id.widget_state_icon, contacted ? R.drawable.ic_material_call : R.drawable.ic_material_schedule);
@@ -89,7 +91,7 @@ public final class PickupWidgetProvider extends AppWidgetProvider {
         row.setViewVisibility(R.id.widget_method_icon, knownMethod ? View.VISIBLE : View.GONE);
         row.setImageViewResource(R.id.widget_method_icon, "비대면 수거".equals(method) ? R.drawable.ic_material_person_off : R.drawable.ic_material_person);
         row.setContentDescription(R.id.widget_method_icon, knownMethod ? method : "");
-        row.setContentDescription(R.id.widget_row, item.optString("name") + ", " + PickupWidgetData.dateLabel(item.optString("date")) + ", " + (contacted ? "연락 완료" : "새 신청") + (knownMethod ? ", " + method : ""));
+        row.setContentDescription(R.id.widget_row, item.optString("name") + ", " + PickupWidgetData.dateLabel(item.optString("date")) + ", " + (contacted ? "연락 완료" : "새 신청") + (knownMethod ? ", " + method : "") + ", " + (address.isEmpty() ? "주소 미기재" : address));
         row.setOnClickFillInIntent(R.id.widget_row, new Intent().putExtra(REQUEST_ID, item.optString("id")));
         return row;
     }

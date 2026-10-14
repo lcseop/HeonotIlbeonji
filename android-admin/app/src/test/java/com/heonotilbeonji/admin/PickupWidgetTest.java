@@ -17,6 +17,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import org.robolectric.shadows.ShadowDialog;
 import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
@@ -26,7 +27,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class PickupWidgetTest {
     private JSONObject request(String id, String date, String status) throws Exception {
         return new JSONObject().put("id", id).put("name", "고객 " + id).put("date", date).put("status", status)
-            .put("phone", "01012345678").put("address", "주소는 위젯에 저장하지 않음");
+            .put("phone", "01012345678").put("address", "경기도 김포시 고촌읍 전호로56번길 30, 1층 (우측)");
     }
     @Test public void widgetIncludesBothStatesAndSortsByFullPreferredDate() throws Exception {
         JSONArray input = new JSONArray().put(request("later", "2027-01-01", "new"))
@@ -48,7 +49,7 @@ public class PickupWidgetTest {
         PickupWidgetData.store(context, new JSONArray().put(request("one", "2026-10-14", "new")));
         JSONObject cached = PickupWidgetData.read(context).getJSONObject(0);
         assertEquals("one", cached.getString("id"));
-        assertFalse(cached.has("phone")); assertFalse(cached.has("address"));
+        assertFalse(cached.has("phone")); assertEquals("경기도 김포시 고촌읍 전호로56번길 30, 1층 (우측)", cached.getString("address"));
         context.getSharedPreferences("admin", Context.MODE_PRIVATE).edit().remove("session").commit();
         assertEquals(0, PickupWidgetData.read(context).length());
         PickupWidgetData.clear(context);
@@ -79,6 +80,22 @@ public class PickupWidgetTest {
             assertEquals(method.isEmpty() ? View.GONE : View.VISIBLE, icon.getVisibility());
             assertEquals(method, icon.getContentDescription().toString());
             if (!method.isEmpty()) assertTrue(row.getContentDescription().toString().contains(method));
+        }
+    }
+    @Test @Config(sdk=35) @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void longAddressesWrapCompletelyWithoutEllipsis() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        String address = "경기도 김포시 고촌읍 전호로56번길 30, 아주 긴 건물 이름 101동 1203호 (우측 출입구)";
+        for (int width : new int[]{220, 320}) {
+            View row = PickupWidgetProvider.row(context, request("one", "2026-10-14", "new").put("address", address)).apply(context, new FrameLayout(context));
+            row.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            row.layout(0, 0, width, row.getMeasuredHeight());
+            TextView text = row.findViewById(R.id.widget_address);
+            assertEquals(address, text.getText().toString()); assertNull(text.getEllipsize());
+            assertTrue(text.getLineCount() > 1);
+            assertEquals(address.length(), text.getLayout().getLineEnd(text.getLineCount() - 1));
+            assertEquals(0, text.getLayout().getEllipsisCount(text.getLineCount() - 1));
+            assertTrue(text.getBottom() <= row.getHeight());
         }
     }
     @Test public void hostedWidgetRendersCacheAndClearsAfterLogout() throws Exception {
