@@ -24,7 +24,8 @@ public class PickupSmsTest {
             Intent intent=PickupSms.draft(request("2026-01-05",method));
             assertEquals(Intent.ACTION_SENDTO,intent.getAction());
             assertEquals("smsto:01012345678",intent.getData().toString());
-            assertEquals("1월 5일 (월요일) "+method+" 확인 및 접수되었습니다. 대단히 감사합니다~~\n코스 시간이 정해지면 문자 드리겠습니다.",intent.getStringExtra("sms_body"));
+            String prefix="대면 수거".equals(method)?"1월 5일 (월요일) 수거":"1월 5일 (월요일) 비대면 수거";
+            assertEquals(prefix+" 확인 및 접수 완료되었습니다. 희망일 전에 코스 시간이 정해지면 문자 드리겠습니다. 궁금한 점이 있으시면 이 번호로 문자나 전화 부탁 드리겠습니다. 감사합니다~~",intent.getStringExtra("sms_body"));
         }
     }
     @Test public void missingAndInvalidDatesOrMethodsAreNotUsedInConfirmation()throws Exception {
@@ -41,7 +42,7 @@ public class PickupSmsTest {
             Intent intent=shadowOf(activity).getNextStartedActivity();
             assertEquals(Intent.ACTION_SENDTO,intent.getAction());
             assertEquals("smsto:01012345678",intent.getData().toString());
-            assertEquals("10월 15일 (목요일) 비대면 수거 확인 및 접수되었습니다. 대단히 감사합니다~~\n코스 시간이 정해지면 문자 드리겠습니다.",intent.getStringExtra("sms_body"));
+            assertEquals("10월 15일 (목요일) 비대면 수거 확인 및 접수 완료되었습니다. 희망일 전에 코스 시간이 정해지면 문자 드리겠습니다. 궁금한 점이 있으시면 이 번호로 문자나 전화 부탁 드리겠습니다. 감사합니다~~",intent.getStringExtra("sms_body"));
             assertEquals("new",item.getString("status"));
             dialog.dismiss();
         }

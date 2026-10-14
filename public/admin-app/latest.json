@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 30,
-  "versionName": "1.4.17",
-  "apkPath": "/admin-app/heonot-admin-1.4.17.apk",
-  "sha256": "0d0467d22e714d29bac99cc2fd91b178a84ae41a123ab2c603b4483725b895ff",
-  "size": 4349675,
-  "releaseNotes": "문자에 요일과 새 안내 문구를 반영했습니다. 잠금 화면 위젯 호스트 지원을 선언하고 One UI 8.5 LockStar에서 기존 신청 목록 위젯을 추가하는 안내를 설정에 넣었습니다."
+  "versionCode": 31,
+  "versionName": "1.4.18",
+  "apkPath": "/admin-app/heonot-admin-1.4.18.apk",
+  "sha256": "93b3ea98ed12b4e3d8d06a6850dc5930ac50d0b07420fdbae617f934b67e5058",
+  "size": 4241282,
+  "releaseNotes": "수거 확인 문자 문구를 요청하신 내용으로 변경했습니다. 날짜와 요일을 자동 입력하며 대면 신청에서는 비대면 문구를 제외합니다."
 }

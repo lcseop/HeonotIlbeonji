@@ -17,7 +17,8 @@ final class PickupSms {
         try {
             SimpleDateFormat parser=new SimpleDateFormat("yyyy-MM-dd",Locale.KOREA);parser.setLenient(false);parser.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
             SimpleDateFormat format=new SimpleDateFormat("M월 d일 (EEEE)",Locale.KOREA);format.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
-            String body=format.format(parser.parse(day))+" "+method+" 확인 및 접수되었습니다. 대단히 감사합니다~~\n코스 시간이 정해지면 문자 드리겠습니다.";
+            String body=format.format(parser.parse(day))+" "+("비대면 수거".equals(method)?"비대면 ":"")
+                +"수거 확인 및 접수 완료되었습니다. 희망일 전에 코스 시간이 정해지면 문자 드리겠습니다. 궁금한 점이 있으시면 이 번호로 문자나 전화 부탁 드리겠습니다. 감사합니다~~";
             return new Intent(Intent.ACTION_SENDTO,Uri.fromParts("smsto",phone,null)).putExtra("sms_body",body);
         }catch(java.text.ParseException error){throw new IllegalArgumentException("희망 날짜를 확인해 주세요.");}
     }
