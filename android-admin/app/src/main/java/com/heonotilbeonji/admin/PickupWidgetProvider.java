@@ -1,6 +1,7 @@
 package com.heonotilbeonji.admin;
 
 import android.app.PendingIntent;
+import android.app.AlarmManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.appwidget.AppWidgetManager;
@@ -10,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.RemoteViews;
 import org.json.JSONArray;
@@ -21,27 +23,51 @@ import java.util.TimeZone;
 
 public final class PickupWidgetProvider extends AppWidgetProvider {
     static final String REFRESH = "com.heonotilbeonji.admin.WIDGET_REFRESH";
+    static final String AUTO_REFRESH = "com.heonotilbeonji.admin.WIDGET_AUTO_REFRESH";
     static final String REQUEST_ID = "widgetRequestId";
     static final String OPEN_HOME = "com.heonotilbeonji.admin.WIDGET_HOME";
     static final int JOB_ID = 1749;
+    static final int PERIODIC_JOB_ID = 1750;
+    static final long AUTO_INTERVAL = 5 * 60 * 1000L;
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) { renderAll(context); requestRefresh(context); }
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (REFRESH.equals(intent.getAction())) { renderAll(context); requestRefresh(context); }
+        if (REFRESH.equals(intent.getAction()) || AUTO_REFRESH.equals(intent.getAction())) { renderAll(context); requestRefresh(context); }
     }
     @Override public void onDeleted(Context context, int[] ids) {
+        for (int id : ids) PickupWidgetSettings.remove(context, id);
         if (widgetIds(context).length == 0) {
-            JobScheduler scheduler = context.getSystemService(JobScheduler.class);
-            if (scheduler != null) scheduler.cancel(JOB_ID);
+            stopAutomaticRefresh(context);
         }
     }
+    @Override public void onDisabled(Context context) { stopAutomaticRefresh(context); }
     static int[] widgetIds(Context context) { return AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, PickupWidgetProvider.class)); }
     static void requestRefresh(Context context) {
         if (widgetIds(context).length == 0) return;
-        if (context.getSharedPreferences("admin", Context.MODE_PRIVATE).getString("session", "").isEmpty()) { PickupWidgetData.clear(context); return; }
+        if (context.getSharedPreferences("admin", Context.MODE_PRIVATE).getString("session", "").isEmpty()) { stopAutomaticRefresh(context); PickupWidgetData.clear(context); return; }
+        ensureAutomaticRefresh(context);
         JobScheduler scheduler = context.getSystemService(JobScheduler.class);
         if (scheduler != null) scheduler.schedule(new JobInfo.Builder(JOB_ID, new ComponentName(context, PickupWidgetRefreshService.class))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setMinimumLatency(0).build());
+    }
+    static PendingIntent automaticIntent(Context context) {
+        return PendingIntent.getBroadcast(context, 1750, new Intent(context, PickupWidgetProvider.class).setAction(AUTO_REFRESH), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+    static void ensureAutomaticRefresh(Context context) {
+        AlarmManager alarm = context.getSystemService(AlarmManager.class);
+        if (alarm != null) alarm.setInexactRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + AUTO_INTERVAL, AUTO_INTERVAL, automaticIntent(context));
+        JobScheduler scheduler = context.getSystemService(JobScheduler.class);
+        if (scheduler != null) {
+            boolean scheduled = false;
+            for (JobInfo job : scheduler.getAllPendingJobs()) if (job.getId() == PERIODIC_JOB_ID) scheduled = true;
+            if (!scheduled) scheduler.schedule(new JobInfo.Builder(PERIODIC_JOB_ID, new ComponentName(context, PickupWidgetRefreshService.class))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(15 * 60 * 1000L).setPersisted(true).build());
+        }
+    }
+    static void stopAutomaticRefresh(Context context) {
+        AlarmManager alarm = context.getSystemService(AlarmManager.class); if (alarm != null) alarm.cancel(automaticIntent(context));
+        JobScheduler scheduler = context.getSystemService(JobScheduler.class);
+        if (scheduler != null) { scheduler.cancel(JOB_ID); scheduler.cancel(PERIODIC_JOB_ID); }
     }
     static void renderAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -69,6 +95,9 @@ public final class PickupWidgetProvider extends AppWidgetProvider {
     }
     static RemoteViews views(Context context, int id) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.pickup_widget);
+        views.setInt(R.id.widget_background_image, "setImageAlpha", PickupWidgetSettings.alpha(context, id));
+        Intent settings = new Intent(context, PickupWidgetConfigActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(R.id.widget_settings, PendingIntent.getActivity(context, id, settings, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         JSONArray rows = PickupWidgetData.read(context);
         boolean loggedIn = !context.getSharedPreferences("admin", Context.MODE_PRIVATE).getString("session", "").isEmpty();
         views.setTextViewText(R.id.widget_count, rows.length() + "건");

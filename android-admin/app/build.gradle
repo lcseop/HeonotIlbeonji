@@ -17,8 +17,8 @@ android {
         applicationId 'com.heonotilbeonji.admin'
         minSdk 23
         targetSdk 36
-        versionCode 24
-        versionName '1.4.11'
+        versionCode 25
+        versionName '1.4.12'
         buildConfigField 'String', 'API_BASE_URL', '"' + apiBaseUrl + '"'
     }
 

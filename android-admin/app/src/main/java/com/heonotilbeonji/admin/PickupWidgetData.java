@@ -58,6 +58,7 @@ final class PickupWidgetData {
         PickupWidgetProvider.renderAll(context);
     }
     static synchronized void clear(Context context) {
+        if (context.getSharedPreferences("admin", Context.MODE_PRIVATE).getString("session", "").isEmpty()) PickupWidgetProvider.stopAutomaticRefresh(context);
         prefs(context).edit().putString("rows", "[]").putLong("updated", 0)
             .putLong("revision", prefs(context).getLong("revision", 0) + 1).putString("error", "").apply();
         PickupWidgetProvider.renderAll(context);
