@@ -24,12 +24,45 @@
   let token = '';
   let widgetId;
   const fallback = '현재 온라인 접수가 어렵습니다. 010-4880-8259로 전화해 주세요.';
+  const fieldErrors = new Map();
+  function clearFieldError(field) {
+    const error = fieldErrors.get(field);
+    if (!error) return;
+    field.removeAttribute('aria-invalid');
+    const description = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== error.id).join(' ');
+    if (description) field.setAttribute('aria-describedby', description);
+    else field.removeAttribute('aria-describedby');
+    error.remove();
+    fieldErrors.delete(field);
+  }
+  function showFieldError(name, message) {
+    if (!['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message', 'consent'].includes(name)) return;
+    const field = form.elements.namedItem(name);
+    if (!field || typeof field.focus !== 'function') return;
+    const error = document.createElement('span');
+    error.id = `pickup-error-${name}`;
+    error.className = 'pickup-field-error';
+    error.textContent = message;
+    error.setAttribute('role', 'alert');
+    field.closest('label').append(error);
+    field.setAttribute('aria-invalid', 'true');
+    field.setAttribute('aria-describedby', `${field.getAttribute('aria-describedby') || ''} ${error.id}`.trim());
+    fieldErrors.set(field, error);
+    field.focus();
+    field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  for (const event of ['input', 'change']) form.addEventListener(event, event => {
+    if (fieldErrors.has(event.target)) {
+      clearFieldError(event.target);
+      if (!settled) show('');
+    }
+  });
 
   function updateDateRange() {
     const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
     const start = new Date(`${today}T00:00:00Z`).getTime();
     date.min = new Date(start + 86400000).toISOString().slice(0, 10);
-    date.max = new Date(start + 90 * 86400000).toISOString().slice(0, 10);
+    date.max = new Date(start + 30 * 86400000).toISOString().slice(0, 10);
   }
   updateDateRange();
   date.addEventListener('focus', updateDateRange);
@@ -74,6 +107,7 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!enabled || pending || settled) return;
+    for (const field of fieldErrors.keys()) clearFieldError(field);
     updateDateRange();
     if (!form.reportValidity()) return;
     if (new Date(`${date.value}T00:00:00Z`).getUTCDay() === 0) {
@@ -111,6 +145,7 @@
       } else {
         settled = result.uncertain === true;
         show(result.message || fallback, true);
+        if (!settled && typeof result.field === 'string') showFieldError(result.field, result.message || '입력 내용을 확인해 주세요.');
         if (!settled) resetChallenge();
       }
     } catch {

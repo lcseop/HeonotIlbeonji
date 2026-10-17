@@ -10,8 +10,11 @@ async function page(response, tracking = 'available') {
   const classes = new Set();
   const notice = { classList: { toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); }, contains: name => classes.has(name) } };
   const button = {};
+  const attrs={};const errors=[];let focused=false,scrolled=false;
+  const phone={setAttribute:(name,value)=>{attrs[name]=value;},getAttribute:name=>attrs[name],removeAttribute:name=>{delete attrs[name];},
+    closest:()=>({append:error=>errors.push(error)}),focus:()=>{focused=true;},scrollIntoView:()=>{scrolled=true;}};
   const form = {
-    elements: { date: { value: '2026-10-08', addEventListener() {}, focus() {} }, consent: { checked: true } },
+    elements: { date: { value: '2026-10-08', addEventListener() {}, focus() {} }, consent: { checked: true }, namedItem:name=>name==='phone'?phone:null },
     querySelector: selector => selector === '[type="submit"]' ? button : null, addEventListener: (name, fn) => { listeners[name] = fn; },
     reportValidity: () => true, setAttribute() {}, reset() {},
   };
@@ -27,7 +30,7 @@ async function page(response, tracking = 'available') {
     FormData: class { get() { return 'fixture'; } },
     document: {
       querySelector: selector => selector === '#pickupForm' ? form : notice,
-      createElement: () => ({}), head: { append: script => script.onload() },
+      createElement: () => ({setAttribute(){},remove(){this.removed=true;}}), head: { append: script => script.onload() },
     },
     fetch: async (url, options) => options.method === 'POST' ? response :
       { ok: true, json: async () => ({ enabled: true, siteKey: 'test' }) },
@@ -36,8 +39,15 @@ async function page(response, tracking = 'available') {
   // Complete initialization without contacting any external service.
   await new Promise(resolve => setImmediate(resolve));
   const submit = () => listeners.submit({ preventDefault() {} });
-  return { submit, events, button, notice };
+  return { submit, events, button, notice, phone, attrs, errors, listeners, focused:()=>focused&&scrolled };
 }
+
+test('invalid phone is marked inline, focused, and cleared when corrected without tracking a conversion',async()=>{
+  const ui=await page({ok:false,json:async()=>({field:'phone',message:'연락처를 휴대폰 번호로 입력해 주세요.'})});
+  await ui.submit();assert.equal(ui.attrs['aria-invalid'],'true');assert.equal(ui.attrs['aria-describedby'],'pickup-error-phone');
+  assert.equal(ui.errors[0].textContent,'연락처를 휴대폰 번호로 입력해 주세요.');assert.ok(ui.focused());assert.equal(ui.events.length,0);
+  ui.listeners.input({target:ui.phone});assert.equal(ui.attrs['aria-invalid'],undefined);assert.equal(ui.attrs['aria-describedby'],undefined);assert.ok(ui.errors[0].removed);
+});
 
 test('accepted request records the supplied conversion once, even with repeated submit', async () => {
   const ui = await page({ ok: true, json: async () => ({ accepted: true, message: '접수 완료' }) });

@@ -23,24 +23,39 @@ function settings(env: Environment) {
   } catch { return null; }
 }
 
-export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
+export function validatePickup(data: Record<string, unknown>, now: Date): { pickup: Pickup; error?: never } | { pickup?: never; error: { field: string; message: string } } {
   const limits = { name: 40, phone: 20, address: 150, amount: 15, date: 10, timeSlot: 15, pickupMethod: 15, message: 350 };
+  const titles: Record<string, string> = { name: '성함', phone: '연락처', address: '수거 주소', amount: '예상 수거량', date: '희망 날짜', timeSlot: '희망 시간대', pickupMethod: '수거 방식', message: '문의 내용' };
+  const fail = (field: string, message: string) => ({ error: { field, message } });
   const fields: Record<string, string> = {};
   for (const [key, limit] of Object.entries(limits)) {
-    const value = data[key];
-    if (typeof value !== 'string' || value.length > limit || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(value)) return null;
+    // FormData serializes textarea line breaks as CRLF. Preserve normal paragraphs.
+    const raw = data[key];
+    const value = typeof raw === 'string' && key === 'message' ? raw.replace(/\r\n?/g, '\n') : raw;
+    if (typeof value !== 'string') return fail(key, `${titles[key]} 항목을 입력해 주세요.`);
+    if (value.length > limit) return fail(key, `${titles[key]} 항목은 ${limit}자 이내로 입력해 주세요.`);
+    if (/[\u0000-\u0008\u000b-\u001f\u007f]/.test(value)) return fail(key, `${titles[key]} 항목에 사용할 수 없는 문자가 있습니다. 다시 입력해 주세요.`);
     fields[key] = value.trim();
-    if (key !== 'message' && (!fields[key] || /[\r\n]/.test(value))) return null;
+    if (key !== 'message' && (!fields[key] || /[\r\n]/.test(value))) return fail(key, `${titles[key]} 항목을 확인해 주세요.`);
   }
-  fields.phone = fields.phone.replace(/[ -]/g, '');
-  if (!/^01[016789]\d{7,8}$/.test(fields.phone) || !amounts.has(fields.amount) ||
-      !timeSlots.has(fields.timeSlot) || !pickupMethods.has(fields.pickupMethod) || data.consent !== true) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fields.date)) return null;
+  fields.phone = fields.phone.replace(/[\s.()\-\u2010-\u2015]/g, '').replace(/^\+82(?:0)?/, '0');
+  if (!/^01[016789]\d{7,8}$/.test(fields.phone)) return fail('phone', '연락처를 휴대폰 번호로 입력해 주세요. 예: 010-1234-5678');
+  if (!amounts.has(fields.amount)) return fail('amount', '예상 수거량을 다시 선택해 주세요.');
+  if (!timeSlots.has(fields.timeSlot)) return fail('timeSlot', '희망 시간대를 선택해 주세요.');
+  if (!pickupMethods.has(fields.pickupMethod)) return fail('pickupMethod', '대면 또는 비대면 수거 방식을 선택해 주세요.');
+  if (data.consent !== true) return fail('consent', '개인정보 수집 및 이용에 동의해 주세요.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fields.date)) return fail('date', '희망 날짜를 달력에서 다시 선택해 주세요.');
   const day = new Date(`${fields.date}T00:00:00Z`);
   const todayKst = new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
-  const lastDate = new Date(new Date(`${todayKst}T00:00:00Z`).getTime() + 90 * 86400000).toISOString().slice(0, 10);
-  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== fields.date || day.getUTCDay() === 0 || fields.date <= todayKst || fields.date > lastDate) return null;
-  return fields as Pickup;
+  const lastDate = new Date(new Date(`${todayKst}T00:00:00Z`).getTime() + 30 * 86400000).toISOString().slice(0, 10);
+  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== fields.date) return fail('date', '올바른 희망 날짜를 선택해 주세요.');
+  if (fields.date <= todayKst || fields.date > lastDate) return fail('date', '희망 날짜는 내일부터 30일 이내로 선택해 주세요.');
+  if (day.getUTCDay() === 0) return fail('date', '일요일은 운영하지 않습니다. 월요일부터 토요일 사이의 날짜를 선택해 주세요.');
+  return { pickup: fields as Pickup };
+}
+
+export function parsePickup(data: Record<string, unknown>, now: Date): Pickup | null {
+  return validatePickup(data, now).pickup || null;
 }
 
 export async function limitedJson(request: Request, maxBytes = 8192) {
@@ -78,8 +93,9 @@ export async function submitPickup(request: Request, env: Environment, send: typ
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return reply(400, { message: '신청 내용이 너무 길거나 올바르지 않습니다.' }); }
-  const pickup = parsePickup(data, now);
-  if (!pickup) return reply(400, { message: '입력 내용과 개인정보 동의를 확인해 주세요. 방문 날짜는 내일부터 90일 이내, 월~토로 선택해 주세요.' });
+  const validation = validatePickup(data, now);
+  if (validation.error) return reply(400, validation.error);
+  const pickup = validation.pickup;
   if (typeof data.token !== 'string' || !data.token || data.token.length > 2048) return reply(400, { message: '자동 입력 방지 확인을 완료해 주세요.' });
 
   // Turnstile tokens are single-use: replays cannot trigger another paid send.

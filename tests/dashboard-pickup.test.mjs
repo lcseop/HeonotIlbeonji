@@ -91,6 +91,16 @@ test('memo and application deletion stay scoped to the selected IDs', async () =
   assert.ok(statements.some(item => item.sql === 'DELETE FROM pickup_requests WHERE id = ?' && item.args[0] === 'test-request-id'));
 });
 
+test('input errors identify the affected field without verifying or storing a request', async () => {
+  for (const [change, field] of [[{phone:'123'},'phone'],[{consent:false},'consent'],[{date:'2026-10-04'},'date']]) {
+    const db=database();
+    const result=await submitDashboardPickup(request({...payload,...change}),env,db,()=>assert.fail('invalid input must not invoke external services'),now);
+    assert.equal(result.status,400);const error=await result.json();assert.equal(error.field,field);
+    if(field==='phone')assert.doesNotMatch(error.message,/날짜|동의/);
+    assert.equal(db.inserted.length,0);
+  }
+});
+
 test('invalid origin or challenge never stores an application', async () => {
   const db = database();
   assert.equal((await submitDashboardPickup(request(payload, 'https://other.example'), env, db, () => assert.fail('must not call'), now)).status, 403);

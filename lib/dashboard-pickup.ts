@@ -1,5 +1,5 @@
 import { adminReady, notifyAdmins, privateJson, savePickup } from './admin.ts';
-import { limitedJson, parsePickup } from './pickup.ts';
+import { limitedJson, validatePickup } from './pickup.ts';
 
 const unavailable = '현재 온라인 접수가 어렵습니다. 010-4880-8259로 전화해 주세요.';
 
@@ -30,8 +30,9 @@ export async function submitDashboardPickup(request: Request, env: NodeJS.Proces
   let data: Record<string, unknown>;
   try { data = await limitedJson(request); }
   catch { return privateJson({ message: '신청 내용이 너무 길거나 올바르지 않습니다.' }, 400); }
-  const pickup = parsePickup(data, now);
-  if (!pickup) return privateJson({ message: '입력 내용과 개인정보 동의를 확인해 주세요. 방문 날짜는 내일부터 90일 이내, 월~토로 선택해 주세요.' }, 400);
+  const validation = validatePickup(data, now);
+  if (validation.error) return privateJson(validation.error, 400);
+  const pickup = validation.pickup;
   if (typeof data.token !== 'string' || !data.token || data.token.length > 2048) return privateJson({ message: '자동 입력 방지 확인을 완료해 주세요.' }, 400);
 
   try {
