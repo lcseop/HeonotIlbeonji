@@ -95,3 +95,7 @@
   .extra-services h3 { font-size: 22px; }
   .extra-services .button { width: 100%; margin-top: 22px; }
 }
+
+/* Keep the bag-volume example readable alongside the minimum weight. */
+.pickup-weight-example { font-size: .9em; font-weight: 400; overflow-wrap: anywhere; }
+.guide-highlights .pickup-weight-example { display: block; margin-top: 5px; font-size: 13px; font-weight: 400; line-height: 1.65; letter-spacing: normal; overflow-wrap: anywhere; }
