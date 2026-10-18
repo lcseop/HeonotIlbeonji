@@ -1,0 +1,11 @@
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+const version='1.0.0';
+const filename=`HeonotDesk-Setup-${version}.exe`;
+await mkdir('public/desktop-app',{recursive:true});
+const binary=await readFile(`desktop-admin/build/${filename}`);
+if(binary.subarray(0,2).toString()!=='MZ')throw Error('Windows installer is missing');
+await copyFile(`desktop-admin/build/${filename}`,`public/desktop-app/${filename}`);
+await copyFile('docs/PC관리자-설치와사용.md','public/desktop-app/사용안내.txt');
+await writeFile('public/desktop-app/latest.json',JSON.stringify({version,filename,path:`/desktop-app/${filename}`,size:binary.length,sha256:createHash('sha256').update(binary).digest('hex')},null,2)+'\n');
+console.log(`Prepared Windows admin ${version}: ${binary.length} bytes.`);

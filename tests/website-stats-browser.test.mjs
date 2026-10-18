@@ -25,7 +25,7 @@ test('failed beacon falls back to keepalive using the same anonymous event, with
   const ui = page(false);
   assert.equal(ui.fetched[0].options.keepalive, true);
   assert.equal(await ui.sent[0].body.text(), ui.fetched[0].options.body);
-  assert.deepEqual(Object.keys(JSON.parse(ui.fetched[0].options.body)).sort(), ['id', 'type']);
+  assert.deepEqual(Object.keys(JSON.parse(ui.fetched[0].options.body)).sort(), ['id', 'source', 'type']);
   const broken = page('throws'); assert.doesNotThrow(() => broken.click());
   assert.equal(broken.fetched.length, 2);
 });
