@@ -11,6 +11,7 @@ class Uninstall {
   if(Process.GetProcessesByName("HeonotDesk").Length>0){MessageBox.Show("관리자 프로그램을 먼저 닫아 주세요.");return;}
   try{
    foreach(var file in new[]{"HeonotDesk.exe","HeonotDesk.exe.config"}){var path=Path.Combine(root,file);if(File.Exists(path))File.Delete(path);}
+   foreach(var icon in Directory.GetFiles(root,"HeonotDesk-*.ico")){if(String.Equals(Path.GetDirectoryName(Path.GetFullPath(icon)),Path.GetFullPath(root),StringComparison.OrdinalIgnoreCase))File.Delete(icon);}
    var menu=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),"헌옷일번지 관리자");foreach(var file in new[]{"헌옷일번지 관리자.lnk","프로그램 제거.lnk"}){var path=Path.Combine(menu,file);if(File.Exists(path))File.Delete(path);}if(Directory.Exists(menu)&&Directory.GetFileSystemEntries(menu).Length==0)Directory.Delete(menu);
    var shortcut=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),"헌옷일번지 관리자.lnk");if(File.Exists(shortcut))File.Delete(shortcut);
    var session=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"HeonotDesk","session.bin");if(File.Exists(session))File.Delete(session);

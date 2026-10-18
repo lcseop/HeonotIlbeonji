@@ -1,6 +1,6 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const version='1.0.0';
+const {version}=JSON.parse(await readFile('desktop-admin/version.json','utf8'));
 const filename=`HeonotDesk-Setup-${version}.exe`;
 await mkdir('public/desktop-app',{recursive:true});
 const binary=await readFile(`desktop-admin/build/${filename}`);

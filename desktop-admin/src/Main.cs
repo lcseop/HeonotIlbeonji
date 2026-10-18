@@ -21,6 +21,7 @@ using Microsoft.Win32;
 namespace HeonotDesk {
  public sealed class Desk {
   readonly Api api=new Api(); readonly bool demo;
+  DesktopUpdater updater;DispatcherTimer updateTimer;
   Window win;Grid content;StackPanel nav;TextBlock status,title,subtitle;ProgressBar progress;ComboBox month;Button reload;
   DispatcherTimer timer;bool busy=false,initial=true;int page=0;bool sourceToday=false;
   Dictionary<string,object> overview=new Dictionary<string,object>(),probe=new Dictionary<string,object>(),tableData;
@@ -40,14 +41,20 @@ namespace HeonotDesk {
    using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Shell.xaml"))win=(Window)XamlReader.Load(stream);
    content=(Grid)win.FindName("Content");nav=(StackPanel)win.FindName("Navigation");status=(TextBlock)win.FindName("Status");title=(TextBlock)win.FindName("PageTitle");subtitle=(TextBlock)win.FindName("Subtitle");progress=(ProgressBar)win.FindName("Progress");month=(ComboBox)win.FindName("Month");reload=(Button)win.FindName("Reload");
    var logo=(Image)win.FindName("Logo");using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Logo.png")){var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.StreamSource=stream;image.EndInit();logo.Source=image;}
-   win.Icon=logo.Source;
+   using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("App.ico")){var decoder=new IconBitmapDecoder(stream,BitmapCreateOptions.PreservePixelFormat,BitmapCacheOption.OnLoad);win.Icon=decoder.Frames[2];}
+   ((TextBlock)win.FindName("VersionLabel")).Text="헌옷일번지 관리자 "+AppVersion.Current;
+   updater=new DesktopUpdater((message,percent,ready)=>{if(!win.Dispatcher.HasShutdownStarted){((Border)win.FindName("UpdateBox")).Visibility=Visibility.Visible;((TextBlock)win.FindName("UpdateNote")).Text=message;((ProgressBar)win.FindName("UpdateProgress")).Value=percent;((ProgressBar)win.FindName("UpdateProgress")).Visibility=ready||percent==100?Visibility.Collapsed:Visibility.Visible;((Button)win.FindName("InstallUpdate")).Visibility=ready?Visibility.Visible:Visibility.Collapsed;}});
+   ((Button)win.FindName("CheckUpdate")).Click+=async(s,e)=>{if(demo){SetStatus("미리보기에서는 업데이트를 실행하지 않습니다.",false);return;}await updater.Check(true);};
+   ((Button)win.FindName("InstallUpdate")).Click+=(s,e)=>{if(demo)return;if(busy||win.OwnedWindows.Count>0){MessageBox.Show(win,"진행 중인 작업을 마치고 열린 상세 창을 닫아 주세요.");return;}if(!Confirm("프로그램 업데이트","새 버전 "+updater.LatestVersion+"을 설치하고 다시 시작할까요? 입력 중인 내용은 먼저 저장해 주세요. 로그인 정보와 서버의 신청서는 유지됩니다."))return;try{updater.Install();Application.Current.Shutdown();}catch(Exception ex){SetStatus(ex.Message,true);}};
+   updateTimer=new DispatcherTimer{Interval=TimeSpan.FromHours(1)};updateTimer.Tick+=async(s,e)=>{if(!demo)await updater.Check(false);};
+   if(!demo){win.Loaded+=async(s,e)=>await updater.Check(false);updateTimer.Start();}
    for(int i=0;i<24;i++)month.Items.Add(KoreaNow().AddMonths(-i).ToString("yyyy-MM"));month.SelectedIndex=0;
    month.SelectionChanged+=async(s,e)=>{if(!initial){sourceToday=false;await Run(Refresh);}};
    reload.Click+=async(s,e)=>await Run(Refresh);
    ((Button)win.FindName("OpenSite")).Click+=(s,e)=>Process.Start(Api.Origin);
    ((Button)win.FindName("Logout")).Click+=(s,e)=>{if(Confirm("로그아웃할까요?","이 PC에 저장된 로그인 정보도 지워집니다.")){api.Token="";Session.Clear();ShowLogin();}};
    timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(60)};timer.Tick+=async(s,e)=>{if(!busy&&!String.IsNullOrEmpty(api.Token)&&page<3)await Run(Refresh);};
-   win.Closed+=(s,e)=>{timer.Stop();api.Dispose();};
+   win.Closed+=(s,e)=>{timer.Stop();updateTimer.Stop();updater.Dispose();api.Dispose();};
    BuildNav();initial=false;
    if(demo){api.Token="demo-only";DemoData();Render();SetStatus("미리보기 · 모든 데이터는 예시입니다. 서버에 접속하지 않습니다.",false);}
    else{api.Token=Session.Load();if(String.IsNullOrEmpty(api.Token))ShowLogin();else win.Loaded+=async(s,e)=>await Run(Refresh);timer.Start();}
@@ -156,6 +163,6 @@ namespace HeonotDesk {
   public void Snapshot(string folder){Directory.CreateDirectory(folder);win.ShowInTaskbar=false;win.ShowActivated=false;win.Opacity=0;win.Show();for(int i=0;i<5;i++){page=i;BuildNav();Render();win.UpdateLayout();win.Dispatcher.Invoke(DispatcherPriority.Render,new Action(()=>{}));var root=(FrameworkElement)win.Content;root.Measure(new Size(1320,880));root.Arrange(new Rect(0,0,1320,880));root.UpdateLayout();var bitmap=new RenderTargetBitmap(1320,880,96,96,PixelFormats.Pbgra32);bitmap.Render(root);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using(var file=File.Create(System.IO.Path.Combine(folder,"desktop-"+i+".png")))encoder.Save(file);}if(Json.Read(Json.Write(Json.Obj("test",1)))["test"]==null)throw new Exception("JSON test failed");byte[] secret=Encoding.UTF8.GetBytes("test-session");byte[] locked=System.Security.Cryptography.ProtectedData.Protect(secret,null,System.Security.Cryptography.DataProtectionScope.CurrentUser);if(Encoding.UTF8.GetString(System.Security.Cryptography.ProtectedData.Unprotect(locked,null,System.Security.Cryptography.DataProtectionScope.CurrentUser))!="test-session")throw new Exception("Encryption test failed");File.WriteAllText(System.IO.Path.Combine(folder,"self-test.txt"),"Five screens rendered; JSON and current-user encryption passed. No server requests.");}
  }
  public static class Program {
-  [STAThread]public static int Main(string[] args){try{if(args.Length>1&&args[0]=="--check-connection")return ConnectionTest.Run(args[1]);bool test=args.Length>1&&args[0]=="--self-test";var app=new Application();app.DispatcherUnhandledException+=(s,e)=>{MessageBox.Show("작업을 완료하지 못했습니다. 저장 상태를 확인한 뒤 다시 시도해 주세요.\n"+e.Exception.Message,"헌옷일번지 관리자");e.Handled=true;};app.ShutdownMode=ShutdownMode.OnMainWindowClose;using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Shell.xaml")){var shared=(Window)XamlReader.Load(stream);app.Resources=shared.Resources;}var desk=new Desk(test||args.Contains("--demo"));if(test){desk.Snapshot(args[1]);desk.Window.Close();return 0;}app.Run(desk.Window);return 0;}catch(Exception ex){if(args.Length>1&&args[0]=="--self-test")File.WriteAllText(System.IO.Path.Combine(args[1],"error.txt"),ex.ToString());else MessageBox.Show("프로그램을 시작하지 못했습니다.\n"+ex.Message,"헌옷일번지 관리자");return 1;}}
+  [STAThread]public static int Main(string[] args){try{if(args.Length>1&&args[0]=="--test-updater")return UpdateTests.Run(args[1]);if(args.Length>1&&args[0]=="--check-connection")return ConnectionTest.Run(args[1]);bool test=args.Length>1&&args[0]=="--self-test";var app=new Application();app.DispatcherUnhandledException+=(s,e)=>{MessageBox.Show("작업을 완료하지 못했습니다. 저장 상태를 확인한 뒤 다시 시도해 주세요.\n"+e.Exception.Message,"헌옷일번지 관리자");e.Handled=true;};app.ShutdownMode=ShutdownMode.OnMainWindowClose;using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Shell.xaml")){var shared=(Window)XamlReader.Load(stream);app.Resources=shared.Resources;}var desk=new Desk(test||args.Contains("--demo"));if(test){desk.Snapshot(args[1]);desk.Window.Close();return 0;}app.MainWindow=desk.Window;app.Run(desk.Window);return 0;}catch(Exception ex){if(args.Length>1&&args[0]=="--self-test")File.WriteAllText(System.IO.Path.Combine(args[1],"error.txt"),ex.ToString());else MessageBox.Show("프로그램을 시작하지 못했습니다.\n"+ex.Message,"헌옷일번지 관리자");return 1;}}
  }
 }
