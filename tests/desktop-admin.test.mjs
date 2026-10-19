@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { recordWebsiteEvent, parseWebsiteEvent } from '../lib/website-stats.ts';
+import { savePickup, listPickups, ensureTables } from '../lib/admin.ts';
 import { prepareDesktop, readDesktopTable, desktopOverview, desktopQuery, desktopTables } from '../lib/desktop-admin.ts';
 function database(){const sql=new DatabaseSync(':memory:');return{sql,db:{prepare(query){const s=sql.prepare(query);const b=args=>({run:async()=>({meta:{changes:Number(s.run(...args).changes)}}),all:async()=>({results:s.all(...args)})});return{...b([]),bind:(...args)=>b(args)};},async batch(list){sql.exec('BEGIN');try{const out=[];for(const s of list)out.push(await s.run());sql.exec('COMMIT');return out;}catch(e){sql.exec('ROLLBACK');throw e;}}}};}
 const now=new Date('2026-10-18T03:00:00Z');
@@ -37,12 +38,33 @@ const script=readFileSync('public/js/website-stats.js','utf8');
 function browser(url,referrer='',storage=new Map(),session=new Map()){
  const requests=[];const listeners={};let index=0;const store=map=>({getItem:key=>map.get(key)||null,setItem:(key,value)=>map.set(key,value)});
  class Clock extends Date{static now(){return now.getTime();}}
- vm.runInNewContext(script,{URL,location:{href:url},document:{referrer,addEventListener:(key,fn)=>listeners[key]=fn},localStorage:store(storage),sessionStorage:store(session),Date:Clock,crypto:{randomUUID:()=>crypto.randomUUID()},Blob,navigator:{sendBeacon:(url,body)=>{requests.push(body);return true;}}});
- return {requests,listeners,storage,session};
+ const context={URL,location:{href:url},document:{referrer,addEventListener:(key,fn)=>listeners[key]=fn},localStorage:store(storage),sessionStorage:store(session),Date:Clock,crypto:{randomUUID:()=>crypto.randomUUID()},Blob,navigator:{sendBeacon:(url,body)=>{requests.push(body);return true;}}};vm.runInNewContext(script,context);
+ return {requests,listeners,storage,session,source:context.heonotTrafficSource()};
 }
 test('Google and Naver ads and organic referrals are distinguished without sending URLs or terms',async()=>{
  for(const [url,referrer,source]of [['https://1beonji.com/?gclid=secret&query=private','','google_ads'],['https://1beonji.com/?n_media=1&n_query=private','','naver_ads'],['https://1beonji.com/?utm_source=naver&utm_medium=cpc','','naver_ads'],['https://1beonji.com/','https://blog.naver.com/anything','naver_blog'],['https://1beonji.com/','https://www.google.com/search?q=private','google_search'],['https://1beonji.com/','','direct']]){
-   const page=browser(url,referrer);const data=JSON.parse(await page.requests[0].text());assert.equal(data.source,source);assert.match(data.visitor,/^[a-f0-9-]{36}$/);assert.equal(data.url,undefined);assert.equal(data.query,undefined);assert.ok((await page.requests[0].text()).length<=256);
+   const page=browser(url,referrer);const data=JSON.parse(await page.requests[0].text());assert.equal(data.source,source);assert.equal(page.source,source);assert.match(data.visitor,/^[a-f0-9-]{36}$/);assert.equal(data.url,undefined);assert.equal(data.query,undefined);assert.ok((await page.requests[0].text()).length<=256);
    const repeat=browser('https://1beonji.com/','',page.storage,page.session);const next=JSON.parse(await repeat.requests[0].text());assert.equal(next.visitor,data.visitor);assert.equal(next.source,source);
  }
+});
+
+test('new requests retain coarse attribution, old rows remain unknown and retries cannot overwrite it',async()=>{
+ const {db,sql}=database();try{
+  // Simulate a pre-attribution database and an existing customer record.
+  sql.exec(`CREATE TABLE pickup_requests (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, amount TEXT NOT NULL, date TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new');
+  INSERT INTO pickup_requests VALUES ('old',1792416117808,'example','01000000000','example','20kg','2026-10-20','','new');`);
+  await ensureTables(db);
+  const pickup={name:'example',phone:'01000000000',address:'example',amount:'20kg',date:'2026-10-20',timeSlot:'오후',pickupMethod:'비대면 수거',message:''};
+  await savePickup(db,pickup,'ads',true,'google_ads');
+  await savePickup(db,pickup,'ads',true,'naver_ads');
+  await savePickup(db,pickup,'manual',false,'google_ads');
+  await savePickup(db,pickup,'invalid',true,'https://private.example/?phone=secret');
+  const rows=await listPickups(db);
+  assert.equal(rows.find(r=>r.id==='old').trafficSource,'unknown');
+  assert.equal(rows.find(r=>r.id==='ads').trafficSource,'google_ads');
+  assert.equal(rows.find(r=>r.id==='manual').trafficSource,'manual');
+  assert.equal(rows.find(r=>r.id==='invalid').trafficSource,'unknown');
+  const table=await readDesktopTable(db,'requests',0);
+  assert.ok(table.columns.includes('traffic_source'));
+ }finally{sql.close();}
 });

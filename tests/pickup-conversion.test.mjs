@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../public/js/pickup.js', import.meta.url), 'utf8');
-async function page(response, tracking = 'available') {
-  const events = [];
+async function page(response, tracking = 'available', traffic = undefined) {
+  const events = [];const payloads=[];
   const listeners = {};
   const classes = new Set();
   const notice = { classList: { toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); }, contains: name => classes.has(name) } };
@@ -26,20 +26,20 @@ async function page(response, tracking = 'available') {
     events.push(args);
   };
   const context = {
-    window, Date, AbortSignal, setTimeout: () => 1, clearTimeout() {},
+    heonotTrafficSource:traffic, window, Date, AbortSignal, setTimeout: () => 1, clearTimeout() {},
     FormData: class { get() { return 'fixture'; } },
     document: {
       querySelector: selector => selector === '#pickupForm' ? form : notice,
       createElement: () => ({setAttribute(){},remove(){this.removed=true;}}), head: { append: script => script.onload() },
     },
-    fetch: async (url, options) => options.method === 'POST' ? response :
+    fetch: async (url, options) => options.method === 'POST' ? (payloads.push(JSON.parse(options.body)),response) :
       { ok: true, json: async () => ({ enabled: true, siteKey: 'test' }) },
   };
   vm.runInNewContext(source, context);
   // Complete initialization without contacting any external service.
   await new Promise(resolve => setImmediate(resolve));
   const submit = () => listeners.submit({ preventDefault() {} });
-  return { submit, events, button, notice, phone, attrs, errors, listeners, focused:()=>focused&&scrolled };
+  return { submit, payloads, events, button, notice, phone, attrs, errors, listeners, focused:()=>focused&&scrolled };
 }
 
 test('invalid phone is marked inline, focused, and cleared when corrected without tracking a conversion',async()=>{
@@ -74,4 +74,12 @@ test('missing or blocked tracking does not turn an accepted request into a failu
     assert.equal(ui.notice.textContent, '접수 완료');
     assert.equal(ui.button.textContent, '신청 전달 완료');
   }
+});
+
+test('pickup sends the coarse browser category and submits normally if attribution is unavailable',async()=>{
+ for(const category of ['google_ads','naver_blog',undefined]){
+  const ui=await page({ok:true,json:async()=>({accepted:true})},'absent',category?()=>category:undefined);
+  await ui.submit();assert.equal(ui.payloads[0].trafficSource,category||'unknown');
+  assert.equal(ui.button.textContent,'신청 전달 완료');
+ }
 });

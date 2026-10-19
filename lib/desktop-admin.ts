@@ -3,7 +3,7 @@ import { listDayFinances } from './admin-finances.ts';
 import { ensureAcquisition, koreaDay, listWebsiteStats } from './website-stats.ts';
 
 export const desktopTables = {
-  requests: { title: '수거 신청서', table: 'pickup_requests', order: 'created_at DESC, id', columns: ['id','created_at','name','phone','address','amount','date','time_slot','pickup_method','message','status','reserved_time','admin_note','admin_note_updated_at','last_activity_at'] },
+  requests: { title: '수거 신청서', table: 'pickup_requests', order: 'created_at DESC, id', columns: ['id','created_at','name','phone','address','amount','date','time_slot','pickup_method','message','status','reserved_time','admin_note','admin_note_updated_at','last_activity_at','traffic_source'] },
   day_notes: { title: '날짜별 메모', table: 'calendar_memos', order: 'date DESC', columns: ['date','content','updated_at'] },
   finances: { title: '하루 금액', table: 'calendar_finances', order: 'date DESC', columns: ['date','paid_amount','received_amount','updated_at'] },
   flags: { title: '단골·블랙리스트', table: 'customer_flags', order: 'updated_at DESC, phone', columns: ['phone','flag','updated_at'] },

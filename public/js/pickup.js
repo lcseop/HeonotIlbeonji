@@ -118,6 +118,7 @@
     if (!token) { show('자동 입력 방지 확인을 완료한 뒤 신청해 주세요.', true); return; }
     const fields = new FormData(form);
     const payload = Object.fromEntries(['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message'].map(key => [key, fields.get(key)]));
+    payload.trafficSource = typeof globalThis.heonotTrafficSource === 'function' ? globalThis.heonotTrafficSource() : 'unknown';
     payload.consent = form.elements.consent.checked;
     payload.token = token;
     pending = true;

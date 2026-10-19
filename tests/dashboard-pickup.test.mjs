@@ -11,7 +11,7 @@ const env = {
   PICKUP_DELIVERY_MODE: 'dashboard',
 };
 const now = new Date('2026-09-29T15:30:00Z');
-const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', timeSlot: '오후', pickupMethod: '비대면 수거', message: '테스트', consent: true, token: 'test-token' };
+const payload = { name: '테스트', phone: '010-1234-5678', address: '테스트 주소', amount: '20~30kg', date: '2026-10-01', timeSlot: '오후', pickupMethod: '비대면 수거', message: '테스트', trafficSource: 'naver_ads', consent: true, token: 'test-token' };
 function request(data = payload, origin = env.SITE_ORIGIN) {
   return new Request(`${env.SITE_ORIGIN}/api/pickup`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
 }
@@ -54,7 +54,7 @@ test('existing pickup records gain the new columns without clearing old rows', a
   }; } };
   await ensureTables(db);
   await ensureTables(db);
-  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at']);
+  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source']);
   assert.ok(columns.has('id'));
 });
 
@@ -73,6 +73,7 @@ test('verified request is saved once without calling Solapi', async () => {
   assert.equal(db.inserted[0][3], '01012345678');
   assert.equal(db.inserted[0][7], '오후');
   assert.equal(db.inserted[0][8], '비대면 수거');
+  assert.equal(db.inserted[0].at(-1), 'naver_ads');
   assert.equal(urls.length, 1);
 });
 

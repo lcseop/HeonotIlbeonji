@@ -1,4 +1,4 @@
-import { ensureWebsiteStats, websiteStatStatements } from './website-stats.ts';
+import { trafficSources, ensureWebsiteStats, websiteStatStatements } from './website-stats.ts';
 
 export type PickupRecord = {
   id: string;
@@ -15,6 +15,7 @@ export type PickupRecord = {
   reservedTime: string;
   adminNote: string;
   adminNoteUpdatedAt: number;
+  trafficSource: string;
   customerFlag: '' | 'regular' | 'blacklist';
 };
 
@@ -63,15 +64,16 @@ async function prepareTables(db: D1Database) {
     message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
     last_activity_at INTEGER NOT NULL DEFAULT 0,
     reserved_time TEXT NOT NULL DEFAULT '', admin_note TEXT NOT NULL DEFAULT '',
-    admin_note_updated_at INTEGER NOT NULL DEFAULT 0
+    admin_note_updated_at INTEGER NOT NULL DEFAULT 0,
+    traffic_source TEXT NOT NULL DEFAULT 'unknown'
   )`).run();
   const columns = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
-  for (const column of ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at']) {
+  for (const column of ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source']) {
     if (columns.results.some(item => item.name === column)) continue;
     try {
       const definition = ['last_activity_at', 'admin_note_updated_at'].includes(column)
         ? 'INTEGER NOT NULL DEFAULT 0'
-        : `TEXT NOT NULL DEFAULT '${['time_slot', 'pickup_method'].includes(column) ? '미기재' : ''}'`;
+        : `TEXT NOT NULL DEFAULT '${['time_slot', 'pickup_method'].includes(column) ? '미기재' : column === 'traffic_source' ? 'unknown' : ''}'`;
       await db.prepare(`ALTER TABLE pickup_requests ADD COLUMN ${column} ${definition}`).run();
     } catch (error) {
       // Another request may have added the column first; verify before continuing.
@@ -98,14 +100,15 @@ async function prepareTables(db: D1Database) {
 
 }
 
-export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string, website = false) {
+export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: string, website = false, source: unknown = undefined) {
   await ensureTables(db);
   const id = requestId || crypto.randomUUID();
+  const trafficSource = website ? (typeof source === 'string' && (trafficSources as readonly string[]).includes(source) ? source : 'unknown') : 'manual';
   const insert = db.prepare(`INSERT INTO pickup_requests
-    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?) ON CONFLICT(id) DO NOTHING`)
+    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at, traffic_source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
-      pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now());
+      pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now(), trafficSource);
   if (website && typeof db.batch === 'function') {
     await ensureWebsiteStats(db);
     // Commit the accepted website request and its anonymous count together.
@@ -117,7 +120,7 @@ export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: 
 export async function listPickups(db: D1Database) {
   await ensureTables(db);
   const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
-    time_slot AS timeSlot, pickup_method AS pickupMethod, message, status,
+    time_slot AS timeSlot, pickup_method AS pickupMethod, message, status, traffic_source AS trafficSource,
     reserved_time AS reservedTime, admin_note AS adminNote, admin_note_updated_at AS adminNoteUpdatedAt
     , COALESCE((SELECT flag FROM customer_flags WHERE phone =
       CASE WHEN replace(replace(replace(replace(pickup_requests.phone, '-', ''), ' ', ''), '(', ''), ')', '') LIKE '+82%'

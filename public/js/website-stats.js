@@ -33,6 +33,7 @@
       return source;
     } catch { return 'unknown'; }
   })();
+  globalThis.heonotTrafficSource = () => source;
   function visitor() {
     try {
       const day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);

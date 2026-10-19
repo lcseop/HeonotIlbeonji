@@ -6,13 +6,13 @@
 
 필요 환경: .NET Framework 4.8 reference assemblies 및 Windows .NET Framework C# compiler. 추가 NuGet 의존성 없음.
 
-산출물: `build/HeonotDesk-Setup-1.0.1.exe`, 설치 전 직접 실행하는 `build/HeonotDesk.exe` 및 `.config`.
+산출물: `build/HeonotDesk-Setup-1.0.2.exe`, 설치 전 직접 실행하는 `build/HeonotDesk.exe` 및 `.config`.
 
 버전은 `version.json`과 `src/AppVersion.cs`에서 함께 올립니다. `node scripts/publish-desktop.mjs`는 버전별 설치 파일과 크기·SHA-256이 들어 있는 `public/desktop-app/latest.json`을 준비합니다. 배포하면 기존 1.0.1 이상 프로그램이 시작 시 및 매시간 확인해 자동 다운로드합니다. 사용자가 설치를 선택하면 검증된 설치 파일을 실행하고 앱을 종료합니다. 설치기는 해당 프로세스 종료를 기다린 뒤 고정 설치 폴더의 실행 파일·설정·제거 파일·아이콘만 교체하고 재실행합니다. 로그인 토큰과 업무 데이터는 건드리지 않습니다.
 
 업데이트 단위 검증: `HeonotDesk.exe --test-updater <결과파일>`.
 
-설치 교체 검증: `HeonotDesk-Setup-1.0.1.exe --self-test <결과파일>`. 임시 폴더에서만 실행 파일 교체와 잠긴 파일 처리 과정을 시험하며 실제 설치·바로가기·레지스트리를 바꾸지 않습니다.
+설치 교체 검증: `HeonotDesk-Setup-1.0.2.exe --self-test <결과파일>`. 임시 폴더에서만 실행 파일 교체와 잠긴 파일 처리 과정을 시험하며 실제 설치·바로가기·레지스트리를 바꾸지 않습니다.
 
 시각 검증: `HeonotDesk.exe --self-test <출력폴더>`. 예시 자료로 다섯 화면을 렌더링하며 서버에 접속하거나 실제 로그인 파일을 바꾸지 않습니다.
 
