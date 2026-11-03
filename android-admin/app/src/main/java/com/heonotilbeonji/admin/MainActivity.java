@@ -1142,10 +1142,6 @@ public final class MainActivity extends Activity {
             addressLink.setBackground(touchBackground(Color.WHITE, 8));
             addressLink.setContentDescription("티맵에서 주소 검색: " + fullAddress);
             addressLink.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
-            TextView mapHint = label("주소를 누르면 티맵에서 검색해요 ↗", 12, BLUE, false);
-            mapHint.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
-            mapHint.setPadding(0, dp(4), 0, dp(8));
-            address.addView(mapHint);
         }
         LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
         detailLine(belongings, "예상 수거량", item.optString("amount"));

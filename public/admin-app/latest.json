@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 33,
-  "versionName": "1.4.20",
-  "apkPath": "/admin-app/heonot-admin-1.4.20.apk",
-  "sha256": "a4e8af217a99f97e01c06b1de6079924a26d5167c02215bea38593242e871fd8",
-  "size": 4258419,
-  "releaseNotes": "신청서 상세 정보의 주소를 누르면 티맵에서 원문 주소 검색, 티맵 미설치 시 설치 안내"
+  "versionCode": 34,
+  "versionName": "1.4.21",
+  "apkPath": "/admin-app/heonot-admin-1.4.21.apk",
+  "sha256": "067b098466712bed31318cf5708d7443bea6dad5fe2c9190eb3b3cbd57575b34",
+  "size": 4258416,
+  "releaseNotes": "주소 색상과 티맵 검색 기능 유지, 주소 아래 티맵 연결 안내 문구 제거"
 }
