@@ -1132,7 +1132,21 @@ public final class MainActivity extends Activity {
         LinearLayout flagProgress = LoadingTasks.indicator(this, "고객 표시 저장 중…");
         address.addView(flagProgress, margins(4, 0));
         flagButton.setOnClickListener(v -> chooseCustomerFlag(item, flagButton, flagProgress, customer));
-        detailLine(address, "수거 주소", item.optString("address"));
+        String fullAddress = item.optString("address");
+        TextView addressLink = detailLine(address, "수거 주소", fullAddress);
+        if (!fullAddress.trim().isEmpty()) {
+            addressLink.setTextColor(BLUE);
+            addressLink.setTextIsSelectable(false);
+            addressLink.setMinHeight(dp(48));
+            addressLink.setGravity(Gravity.CENTER_VERTICAL);
+            addressLink.setBackground(touchBackground(Color.WHITE, 8));
+            addressLink.setContentDescription("티맵에서 주소 검색: " + fullAddress);
+            addressLink.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
+            TextView mapHint = label("주소를 누르면 티맵에서 검색해요 ↗", 12, BLUE, false);
+            mapHint.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
+            mapHint.setPadding(0, dp(4), 0, dp(8));
+            address.addView(mapHint);
+        }
         LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
         detailLine(belongings, "예상 수거량", item.optString("amount"));
         detailLine(belongings, "문의 내용", item.optString("message", "없음"));
@@ -1377,12 +1391,13 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
-    private void detailLine(LinearLayout parent, String title, String value) {
+    private TextView detailLine(LinearLayout parent, String title, String value) {
         parent.addView(label(title, 12, MUTED, false), margins(12, 4));
         TextView content = label(value.isEmpty() ? "없음" : value, 16, NAVY, false);
         content.setLineSpacing(dp(4), 1);
         content.setTextIsSelectable(true);
         parent.addView(content);
+        return content;
     }
 
     private void editServerUrl() {

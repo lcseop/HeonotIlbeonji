@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 32,
-  "versionName": "1.4.19",
-  "apkPath": "/admin-app/heonot-admin-1.4.19.apk",
-  "sha256": "d45a612fbacf5df23a283b51e795c83aafae7c9bf19ef2485361d02e6761353b",
-  "size": 4372053,
-  "releaseNotes": "금·은·동·스텐·알루미늄 시세 화면 추가, 홈페이지 희망 날짜 요일 표시 수정"
+  "versionCode": 33,
+  "versionName": "1.4.20",
+  "apkPath": "/admin-app/heonot-admin-1.4.20.apk",
+  "sha256": "a4e8af217a99f97e01c06b1de6079924a26d5167c02215bea38593242e871fd8",
+  "size": 4258419,
+  "releaseNotes": "신청서 상세 정보의 주소를 누르면 티맵에서 원문 주소 검색, 티맵 미설치 시 설치 안내"
 }
