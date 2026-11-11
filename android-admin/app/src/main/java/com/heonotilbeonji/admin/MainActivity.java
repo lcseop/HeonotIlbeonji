@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
@@ -17,6 +19,7 @@ import android.net.Uri;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.provider.ContactsContract;
 import android.view.WindowInsets;
 import android.view.WindowManager;
@@ -30,6 +33,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
@@ -1241,13 +1245,42 @@ public final class MainActivity extends Activity {
                     section.removeView(note);
                     detailLine(section, "공동현관 출입 안내", details.optString("entryCode"));
                     detailLine(section, "예금주", details.optString("accountHolder"));
-                    detailLine(section, "은행", details.optString("bankName"));
-                    detailLine(section, "계좌번호", details.optString("accountNumber"));
+                    addAccountLine(section, details.optString("bankName"), details.optString("accountNumber"));
                 });
             } catch (Exception error) {
                 runOnUiThread(() -> { if (dialog.isShowing()) note.setText("정보를 불러오지 못했습니다. 상세 화면을 다시 열어 주세요."); });
             }
         });
+    }
+
+    private void addAccountLine(LinearLayout parent, String bank, String accountNumber) {
+        String value = (bank + " " + accountNumber).trim();
+        if (value.isEmpty()) return;
+        boolean canCopy = !accountNumber.isEmpty();
+        TextView line = label(value, 16, canCopy ? BLUE : NAVY, false);
+        line.setSingleLine(true);
+        line.setMinHeight(dp(48));
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        if (canCopy) {
+            line.setBackground(touchBackground(Color.WHITE, 8));
+            line.setContentDescription(value + ", 계좌번호 복사");
+            line.setOnClickListener(v -> {
+                ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+                if (clipboard == null) return;
+                ClipData clip = ClipData.newPlainText("계좌번호", accountNumber);
+                if (Build.VERSION.SDK_INT >= 24) {
+                    PersistableBundle extras = new PersistableBundle();
+                    extras.putBoolean("android.content.extra.IS_SENSITIVE", true);
+                    clip.getDescription().setExtras(extras);
+                }
+                clipboard.setPrimaryClip(clip);
+            });
+        }
+        HorizontalScrollView scroll = new HorizontalScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.addView(line, new ViewGroup.LayoutParams(-2, -2));
+        parent.addView(scroll, margins(8, 0));
     }
 
     private void customerFlagTitle(TextView title, JSONObject item) {
