@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-import { recordWebsiteEvent, parseWebsiteEvent } from '../lib/website-stats.ts';
-import { savePickup, listPickups, ensureTables } from '../lib/admin.ts';
+import { recordWebsiteEvent, parseWebsiteEvent, koreaDay } from '../lib/website-stats.ts';
+import { savePickup, listPickups, ensureTables, getContactlessDetails, setPickupStatus } from '../lib/admin.ts';
 import { prepareDesktop, readDesktopTable, desktopOverview, desktopQuery, desktopTables } from '../lib/desktop-admin.ts';
 function database(){const sql=new DatabaseSync(':memory:');return{sql,db:{prepare(query){const s=sql.prepare(query);const b=args=>({run:async()=>({meta:{changes:Number(s.run(...args).changes)}}),all:async()=>({results:s.all(...args)})});return{...b([]),bind:(...args)=>b(args)};},async batch(list){sql.exec('BEGIN');try{const out=[];for(const s of list)out.push(await s.run());sql.exec('COMMIT');return out;}catch(e){sql.exec('ROLLBACK');throw e;}}}};}
-const now=new Date('2026-10-18T03:00:00Z');
+import { submitDashboardPickup } from '../lib/dashboard-pickup.ts';
+const now=new Date();
 test('daily visitors deduplicate page reloads and source counters reject event replays',async()=>{
  const {db,sql}=database();try{const visitor=crypto.randomUUID(),id=crypto.randomUUID();
  await recordWebsiteEvent(db,{id,type:'view',source:'google_ads',visitor},now);
@@ -15,7 +16,7 @@ test('daily visitors deduplicate page reloads and source counters reject event r
  await recordWebsiteEvent(db,{id:crypto.randomUUID(),type:'view',source:'google_ads',visitor},now);
  await recordWebsiteEvent(db,{id:crypto.randomUUID(),type:'phone',source:'google_ads'},now);
  await recordWebsiteEvent(db,{id:crypto.randomUUID(),type:'view',source:'naver_ads',visitor:crypto.randomUUID()},now);
- const result=await desktopOverview(db,'2026-10',{PICKUP_DELIVERY_MODE:'dashboard',TURNSTILE_SITE_KEY:'fixture',TURNSTILE_SECRET_KEY:'fixture',SITE_ORIGIN:'https://1beonji.com'});
+ const result=await desktopOverview(db,koreaDay(now).slice(0,7),{PICKUP_DELIVERY_MODE:'dashboard',TURNSTILE_SITE_KEY:'fixture',TURNSTILE_SECRET_KEY:'fixture',SITE_ORIGIN:'https://1beonji.com'});
  assert.equal(result.sources.find(r=>r.source==='google_ads').views,2);assert.equal(result.sources.find(r=>r.source==='google_ads').phoneClicks,1);assert.equal(result.sources.find(r=>r.source==='naver_ads').views,1);
  assert.equal(result.visitors[0].visitors,2);const hash=sql.prepare('SELECT visitor FROM website_visitor_keys LIMIT 1').get().visitor;assert.match(hash,/^[a-f0-9]{64}$/);assert.notEqual(hash,visitor);
  await recordWebsiteEvent(db,{id:crypto.randomUUID(),type:'view',source:'direct',visitor},new Date(now.getTime()+86400000));
@@ -66,5 +67,23 @@ test('new requests retain coarse attribution, old rows remain unknown and retrie
   assert.equal(rows.find(r=>r.id==='invalid').trafficSource,'unknown');
   const table=await readDesktopTable(db,'requests',0);
   assert.ok(table.columns.includes('traffic_source'));
+ }finally{sql.close();}
+});
+
+test('contactless website details are optional, scoped to authenticated detail data and cleared appropriately',async()=>{
+ const {db,sql}=database();try{
+  const env={SITE_ORIGIN:'https://pickup.example',ADMIN_PASSWORD:'fixture-password-long',ADMIN_SESSION_SECRET:'fixture-long-session-secret-test-only',TURNSTILE_SITE_KEY:'fixture',TURNSTILE_SECRET_KEY:'fixture'};
+  const form={name:'예시',phone:'01000000000',address:'예시로 1',amount:'20~30kg',date:'2026-11-12',timeSlot:'오후',pickupMethod:'비대면 수거',message:'',consent:true,token:'fixture',entryCode:'0012#',accountHolder:'예시',bankName:'예시은행'};
+  const send=async()=>Response.json({success:true,hostname:'pickup.example',action:'pickup-request'});
+  const submit=(data)=>submitDashboardPickup(new Request(env.SITE_ORIGIN+'/api/pickup',{method:'POST',headers:{Origin:env.SITE_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify(data)}),env,db,send,new Date('2026-11-11T03:00:00Z'));
+  const bad=await submit({...form,entryCode:'bad\ncode'});assert.equal(bad.status,400);assert.equal((await bad.json()).field,'entryCode');
+  assert.equal((await submit(form)).status,200);
+  const [row]=await listPickups(db);assert.equal(row.hasContactlessDetails,1);assert.equal(row.entryCode,undefined);assert.equal(row.bankName,undefined);
+  assert.deepEqual({...await getContactlessDetails(db,row.id)},{entryCode:'0012#',accountHolder:'예시',bankName:'예시은행'});
+  const {rows,columns}=await readDesktopTable(db,'requests',0);assert.equal(rows[0].entry_code,undefined);assert.ok(!columns.includes('account_holder'));
+  await setPickupStatus(db,row.id,'done');assert.equal((await getContactlessDetails(db,row.id)).entryCode,'');assert.equal((await getContactlessDetails(db,row.id)).bankName,'예시은행');
+  assert.equal((await submit({...form,pickupMethod:'대면 수거'})).status,200);
+  const face=(await listPickups(db)).find(r=>r.pickupMethod==='대면 수거');assert.equal(face.hasContactlessDetails,0);assert.equal(await getContactlessDetails(db,face.id),null);
+  assert.equal(sql.prepare('SELECT entry_code FROM pickup_requests WHERE id=?').get(face.id).entry_code,'');
  }finally{sql.close();}
 });

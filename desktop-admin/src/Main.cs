@@ -126,11 +126,26 @@ namespace HeonotDesk {
   ComboBox Choice(Panel p,string label,string[] choices,string value){Gap(p,Text(label,13,"#52687B",true),14);var c=new ComboBox{ItemsSource=choices,SelectedItem=choices.Contains(value)?value:choices[0],MinHeight=38};Gap(p,c,6);return c;}
   static string NormalLines(string text){return text.Replace("\r\n","\n").Replace("\r","\n");}
   static string RequestSourceName(string key){return key=="manual"?"관리자 직접 작성":String.IsNullOrEmpty(key)||key=="unknown"?"확인 불가":SourceName(key);}
+  void AddContactlessDetails(Window w, Panel p, string id){
+   var section=Stack();section.Children.Add(Text("비대면 수거 정보",16,"#18334E",true));
+   var note=Text("비대면 수거 정보를 불러오는 중…",13,"#52687B");Gap(section,note,8);Gap(p,Card(section),14);
+   w.Loaded+=async(s,e)=>{
+    try{
+     var response=await api.Call("/api/admin/native-requests?contactlessId="+Uri.EscapeDataString(id));
+     if(!w.IsVisible)return;
+     var data=Json.D(response,"details");if(data==null){note.Text="등록된 비대면 수거 정보가 없습니다.";return;}
+     section.Children.Remove(note);
+     string[] keys={"entryCode","accountHolder","bankName"}, labels={"공동현관 비밀번호","예금주","은행"};
+     for(int i=0;i<keys.Length;i++){string value=Json.S(data,keys[i]);Gap(section,Text(labels[i]+"  ·  "+(String.IsNullOrEmpty(value)?"미기재":value),14,"#18334E"),8);}
+    }catch{if(w.IsVisible)note.Text="정보를 불러오지 못했습니다. 상세 화면을 다시 열어 주세요.";}
+   };
+  }
   void EditRequest(Dictionary<string,object> record){bool create=record==null;var r=record??Json.Obj("requestId",Guid.NewGuid().ToString());var w=Dialog(create?"신청서 직접 작성":"신청서 상세 / 수정",680,800);var p=(StackPanel)((ScrollViewer)w.Content).Content;
    p.Children.Add(Text(create?"전화로 받은 신청도 기록하세요":"신청 내용과 관리자 메모",22,"#18334E",true));
    if(!create){Gap(p,Text("유입 경로  ·  "+RequestSourceName(Json.S(r,"trafficSource")),14,"#18334E",true),14);Gap(p,Text("브라우저에서 전달된 경로입니다. 추적 정보가 없으면 확인할 수 없습니다.",12,"#647A8C"),5);}
    var name=Field(p,"성함",Json.S(r,"name"),40);var phone=Field(p,"연락처",Json.S(r,"phone"),30);var address=Field(p,"수거 주소",Json.S(r,"address"),150);var date=Field(p,"희망 날짜 (예: 2026-10-25, 미정이면 비움)",Json.S(r,"date"),10);
    var time=Choice(p,"희망 시간대",new[]{"시간 협의","오전","오후"},Json.S(r,"timeSlot"));var method=Choice(p,"수거 방식",new[]{"방식 협의","대면 수거","비대면 수거"},Json.S(r,"pickupMethod"));var amount=Field(p,"예상 수거량",Json.S(r,"amount"),40);var message=Field(p,"고객 문의 내용",Json.S(r,"message"),350,true);
+   if(!create && Json.N(r,"hasContactlessDetails")==1) AddContactlessDetails(w,p,Json.S(r,"id"));
    TextBox reserved=null,note=null;ComboBox state=null,flag=null;
    if(!create){reserved=Field(p,"관리자 예약 시간 (시:분, 예: 14:30)",Json.S(r,"reservedTime"),5);note=Field(p,"이 신청서의 관리자 메모",Json.S(r,"adminNote"),2000,true);state=Choice(p,"처리 상태",new[]{"새 신청","연락 완료","처리 완료"},State(Json.S(r,"status")));flag=Choice(p,"이 전화번호 표시",new[]{"일반 고객","단골","블랙리스트"},Json.S(r,"customerFlag")=="blacklist"?"블랙리스트":Json.S(r,"customerFlag")=="regular"?"단골":"일반 고객");}
    var error=Text("",13,"#B3261E");Gap(p,error,18);var actions=Row();Gap(p,actions,12);var save=new Button{Content="변경 내용 저장",Padding=new Thickness(20,12,20,12),Background=Brush("#18334E"),Foreground=Brush("#FFFFFF")};actions.Children.Add(save);

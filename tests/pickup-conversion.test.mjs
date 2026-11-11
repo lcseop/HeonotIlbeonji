@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../public/js/pickup.js', import.meta.url), 'utf8');
-async function page(response, tracking = 'available', traffic = undefined) {
+async function page(response, tracking = 'available', traffic = undefined, delivery = undefined) {
   const events = [];const payloads=[];
   const listeners = {};
   const classes = new Set();
@@ -13,9 +13,12 @@ async function page(response, tracking = 'available', traffic = undefined) {
   const attrs={};const errors=[];let focused=false,scrolled=false;
   const phone={setAttribute:(name,value)=>{attrs[name]=value;},getAttribute:name=>attrs[name],removeAttribute:name=>{delete attrs[name];},
     closest:()=>({append:error=>errors.push(error)}),focus:()=>{focused=true;},scrollIntoView:()=>{scrolled=true;}};
+  const extra = {entryCode:{value:''},accountHolder:{value:''},bankName:{value:''}};
+  const fieldset={hidden:true,disabled:true};
+  const method={value:'',addEventListener:(_,fn)=>{listeners.method=fn;}};
   const form = {
-    elements: { date: { value: '2026-10-08', addEventListener() {}, focus() {} }, consent: { checked: true }, namedItem:name=>name==='phone'?phone:null },
-    querySelector: selector => selector === '[type="submit"]' ? button : null, addEventListener: (name, fn) => { listeners[name] = fn; },
+    elements: { date: { value: '2026-10-08', addEventListener() {}, focus() {} }, consent: { checked: true }, pickupMethod:method, namedItem:name=>name==='phone'?phone:extra[name]||null },
+    querySelector: selector => selector === '[type="submit"]' ? button : selector === '#contactlessFields' ? fieldset : null, addEventListener: (name, fn) => { listeners[name] = fn; },
     reportValidity: () => true, setAttribute() {}, reset() {},
   };
   const window = { turnstile: {
@@ -27,19 +30,19 @@ async function page(response, tracking = 'available', traffic = undefined) {
   };
   const context = {
     heonotTrafficSource:traffic, window, Date, AbortSignal, setTimeout: () => 1, clearTimeout() {},
-    FormData: class { get() { return 'fixture'; } },
+    FormData: class { get(key) { return key==='pickupMethod'?method.value:extra[key]?.value??'fixture'; } },
     document: {
       querySelector: selector => selector === '#pickupForm' ? form : notice,
       createElement: () => ({setAttribute(){},remove(){this.removed=true;}}), head: { append: script => script.onload() },
     },
     fetch: async (url, options) => options.method === 'POST' ? (payloads.push(JSON.parse(options.body)),response) :
-      { ok: true, json: async () => ({ enabled: true, siteKey: 'test' }) },
+      { ok: true, json: async () => ({ enabled: true, siteKey: 'test', delivery }) },
   };
   vm.runInNewContext(source, context);
   // Complete initialization without contacting any external service.
   await new Promise(resolve => setImmediate(resolve));
   const submit = () => listeners.submit({ preventDefault() {} });
-  return { submit, payloads, events, button, notice, phone, attrs, errors, listeners, focused:()=>focused&&scrolled };
+  return { submit, extra, fieldset, select:value=>{method.value=value;listeners.method();}, payloads, events, button, notice, phone, attrs, errors, listeners, focused:()=>focused&&scrolled };
 }
 
 test('invalid phone is marked inline, focused, and cleared when corrected without tracking a conversion',async()=>{
@@ -82,4 +85,14 @@ test('pickup sends the coarse browser category and submits normally if attributi
   await ui.submit();assert.equal(ui.payloads[0].trafficSource,category||'unknown');
   assert.equal(ui.button.textContent,'신청 전달 완료');
  }
+});
+
+test('contactless fields appear only for dashboard non-face-to-face requests and clear when switching away',async()=>{
+ const accepted={ok:true,json:async()=>({accepted:true})};
+ const ui=await page(accepted,'absent',undefined,'dashboard');
+ assert.equal(ui.fieldset.hidden,true);ui.select('비대면 수거');assert.equal(ui.fieldset.hidden,false);assert.equal(ui.fieldset.disabled,false);
+ ui.extra.entryCode.value='0012#';ui.select('대면 수거');assert.equal(ui.extra.entryCode.value,'');assert.equal(ui.fieldset.disabled,true);
+ await ui.submit();assert.equal(ui.payloads[0].entryCode,undefined);
+ const nonFace=await page(accepted,'absent',undefined,'dashboard');nonFace.select('비대면 수거');nonFace.extra.entryCode.value='0012#';await nonFace.submit();assert.equal(nonFace.payloads[0].entryCode,'0012#');
+ const sms=await page(accepted,'absent',undefined,'sms');sms.select('비대면 수거');assert.equal(sms.fieldset.hidden,true);
 });

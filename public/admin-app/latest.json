@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 34,
-  "versionName": "1.4.21",
-  "apkPath": "/admin-app/heonot-admin-1.4.21.apk",
-  "sha256": "067b098466712bed31318cf5708d7443bea6dad5fe2c9190eb3b3cbd57575b34",
-  "size": 4258416,
-  "releaseNotes": "주소 색상과 티맵 검색 기능 유지, 주소 아래 티맵 연결 안내 문구 제거"
+  "versionCode": 35,
+  "versionName": "1.4.22",
+  "apkPath": "/admin-app/heonot-admin-1.4.22.apk",
+  "sha256": "af311187d1a5277d5b313589959ff9b07acdb4d23de722565cf05221783cef5b",
+  "size": 4258417,
+  "releaseNotes": "비대면 수거 신청의 공동현관 비밀번호, 예금주, 은행을 상세 화면에 표시"
 }

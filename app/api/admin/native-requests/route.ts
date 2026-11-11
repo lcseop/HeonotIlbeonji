@@ -1,4 +1,4 @@
-import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer, parseCustomerFlag, saveCustomerFlag, getCustomerFlag } from '@/lib/admin';
+import { adminReady, deletePickup, listPickups, privateJson, savePickup, setPickupStatus, validBearer, parseCustomerFlag, saveCustomerFlag, getCustomerFlag, getContactlessDetails } from '@/lib/admin';
 import { editManualPickup, parseManualPickup, parseAdminDetails, saveAdminDetails } from '@/lib/admin-planner';
 import { pickupDb, serverSettings } from '@/lib/admin-runtime';
 import { limitedJson } from '@/lib/pickup';
@@ -16,6 +16,12 @@ async function authorize(request: Request) {
 export async function GET(request: Request) {
   const auth = await authorize(request);
   if (auth.error) return auth.error;
+  const id = new URL(request.url).searchParams.get('contactlessId');
+  if (id !== null) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return privateJson({ message: '신청 정보를 확인해 주세요.' }, 400);
+    try { return privateJson({ details: await getContactlessDetails(auth.db!, id) }); }
+    catch { return privateJson({ message: '비대면 수거 정보를 불러오지 못했습니다.' }, 503); }
+  }
   try { return privateJson({ requests: await listPickups(auth.db!) }); }
   catch { return privateJson({ message: '신청 목록을 불러오지 못했습니다.' }, 503); }
 }

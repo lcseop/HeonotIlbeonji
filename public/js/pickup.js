@@ -16,8 +16,24 @@
   }
   date.addEventListener('input', updateDateDisplay);
   date.addEventListener('change', updateDateDisplay);
-  form.addEventListener('reset', () => setTimeout(updateDateDisplay, 0));
   updateDateDisplay();
+  const contactlessFields = form.querySelector('#contactlessFields');
+  const contactlessKeys = ['entryCode', 'accountHolder', 'bankName'];
+  const pickupMethod = form.elements.pickupMethod;
+  let contactlessEnabled = false;
+  function updateContactlessFields() {
+    if (!contactlessFields || !pickupMethod) return;
+    const visible = contactlessEnabled && pickupMethod.value === '비대면 수거';
+    contactlessFields.hidden = !visible;
+    contactlessFields.disabled = !visible;
+    if (!visible) for (const key of contactlessKeys) {
+      const field = form.elements.namedItem(key);
+      field.value = '';
+      clearFieldError(field);
+    }
+  }
+  pickupMethod?.addEventListener('change', updateContactlessFields);
+  form.addEventListener('reset', () => setTimeout(() => { updateDateDisplay(); updateContactlessFields(); }, 0));
   let enabled = false;
   let pending = false;
   let settled = false;
@@ -36,7 +52,7 @@
     fieldErrors.delete(field);
   }
   function showFieldError(name, message) {
-    if (!['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message', 'consent'].includes(name)) return;
+    if (!['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message', 'consent', ...contactlessKeys].includes(name)) return;
     const field = form.elements.namedItem(name);
     if (!field || typeof field.focus !== 'function') return;
     const error = document.createElement('span');
@@ -98,6 +114,8 @@
         'expired-callback': () => { token = ''; },
         'error-callback': () => { token = ''; if (!pending && !settled) show('자동 입력 방지 확인을 불러오지 못했습니다. 새로고침하거나 전화로 문의해 주세요.', true); },
       });
+      contactlessEnabled = config.delivery === 'dashboard';
+      updateContactlessFields();
       enabled = true;
       button.disabled = false;
       show('');
@@ -119,6 +137,9 @@
     const fields = new FormData(form);
     const payload = Object.fromEntries(['name', 'phone', 'address', 'amount', 'date', 'timeSlot', 'pickupMethod', 'message'].map(key => [key, fields.get(key)]));
     payload.trafficSource = typeof globalThis.heonotTrafficSource === 'function' ? globalThis.heonotTrafficSource() : 'unknown';
+    if (contactlessEnabled && payload.pickupMethod === '비대면 수거' && !contactlessFields?.disabled) {
+      for (const key of contactlessKeys) payload[key] = fields.get(key) || '';
+    }
     payload.consent = form.elements.consent.checked;
     payload.token = token;
     pending = true;

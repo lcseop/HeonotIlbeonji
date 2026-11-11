@@ -1143,6 +1143,8 @@ public final class MainActivity extends Activity {
             addressLink.setContentDescription("티맵에서 주소 검색: " + fullAddress);
             addressLink.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
         }
+        LinearLayout contactlessInfo = item.optInt("hasContactlessDetails") == 1
+                ? detailSection(body, "비대면 수거 정보") : null;
         LinearLayout belongings = detailSection(body, "수거 물품 · 요청사항");
         detailLine(belongings, "예상 수거량", item.optString("amount"));
         detailLine(belongings, "문의 내용", item.optString("message", "없음"));
@@ -1217,11 +1219,34 @@ public final class MainActivity extends Activity {
                     });
                 }).show());
         dialog.show();
+        if (contactlessInfo != null) loadContactlessDetails(item, dialog, contactlessInfo);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
             int height = Math.min(dp(760), (int) (getResources().getDisplayMetrics().heightPixels * .88f));
             dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - dp(24), height);
         }
+    }
+
+    private void loadContactlessDetails(JSONObject item, Dialog dialog, LinearLayout section) {
+        TextView note = label("비대면 수거 정보를 불러오는 중…", 13, MUTED, false);
+        section.addView(note);
+        String path = "/api/admin/native-requests?contactlessId=" + Uri.encode(item.optString("id"));
+        String token = session();
+        io.execute(() -> {
+            try {
+                JSONObject details = ApiClient.request(this, "GET", path, null, token).optJSONObject("details");
+                runOnUiThread(() -> {
+                    if (!dialog.isShowing() || !token.equals(session())) return;
+                    if (details == null) { note.setText("등록된 비대면 수거 정보가 없습니다."); return; }
+                    section.removeView(note);
+                    detailLine(section, "공동현관 비밀번호", details.optString("entryCode"));
+                    detailLine(section, "예금주", details.optString("accountHolder"));
+                    detailLine(section, "은행", details.optString("bankName"));
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> { if (dialog.isShowing()) note.setText("정보를 불러오지 못했습니다. 상세 화면을 다시 열어 주세요."); });
+            }
+        });
     }
 
     private void customerFlagTitle(TextView title, JSONObject item) {

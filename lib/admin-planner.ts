@@ -50,9 +50,12 @@ export async function listDayMemos(db: D1Database) {
 export async function editManualPickup(db: D1Database, id: string, pickup: NewPickup) {
   await ensureTables(db);
   const result = await db.prepare(`UPDATE pickup_requests SET name = ?, phone = ?, address = ?,
-    amount = ?, date = ?, time_slot = ?, pickup_method = ?, message = ?, last_activity_at = ? WHERE id = ?`)
+    amount = ?, date = ?, time_slot = ?, pickup_method = ?, message = ?, last_activity_at = ?,
+    entry_code = CASE WHEN ? = '비대면 수거' THEN entry_code ELSE '' END,
+    account_holder = CASE WHEN ? = '비대면 수거' THEN account_holder ELSE '' END,
+    bank_name = CASE WHEN ? = '비대면 수거' THEN bank_name ELSE '' END WHERE id = ?`)
     .bind(pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date, pickup.timeSlot,
-      pickup.pickupMethod, pickup.message, Date.now(), id).run();
+      pickup.pickupMethod, pickup.message, Date.now(), pickup.pickupMethod, pickup.pickupMethod, pickup.pickupMethod, id).run();
   return (result.meta.changes ?? 0) > 0;
 }
 

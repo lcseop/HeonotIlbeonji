@@ -33,6 +33,16 @@ export async function submitDashboardPickup(request: Request, env: NodeJS.Proces
   const validation = validatePickup(data, now);
   if (validation.error) return privateJson(validation.error, 400);
   const pickup = validation.pickup;
+  const details = { entryCode: '', accountHolder: '', bankName: '' };
+  if (pickup.pickupMethod === '비대면 수거') {
+    for (const [field, label] of [['entryCode', '공동현관 비밀번호'], ['accountHolder', '예금주'], ['bankName', '은행']] as const) {
+      const value = data[field];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || value.length > 40 || /[\u0000-\u001f\u007f]/.test(value))
+        return privateJson({ field, message: label + ' 항목은 한 줄에 40자 이내로 입력해 주세요.' }, 400);
+      details[field] = value.trim();
+    }
+  }
   if (typeof data.token !== 'string' || !data.token || data.token.length > 2048) return privateJson({ message: '자동 입력 방지 확인을 완료해 주세요.' }, 400);
 
   try {
@@ -47,7 +57,7 @@ export async function submitDashboardPickup(request: Request, env: NodeJS.Proces
   } catch { return privateJson({ message: '자동 입력 방지 확인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' }, 503); }
 
   try {
-    await savePickup(settings.db, pickup, undefined, true, data.trafficSource);
+    await savePickup(settings.db, { ...pickup, ...details }, undefined, true, data.trafficSource);
   } catch {
     return privateJson({ message: '신청 내용을 저장하지 못했습니다. 잠시 후 다시 시도하거나 전화해 주세요.' }, 503);
   }
