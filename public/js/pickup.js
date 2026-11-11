@@ -18,7 +18,7 @@
   date.addEventListener('change', updateDateDisplay);
   updateDateDisplay();
   const contactlessFields = form.querySelector('#contactlessFields');
-  const contactlessKeys = ['entryCode', 'accountHolder', 'bankName'];
+  const contactlessKeys = ['entryCode', 'accountHolder', 'bankName', 'accountNumber'];
   const pickupMethod = form.elements.pickupMethod;
   let contactlessEnabled = false;
   function updateContactlessFields() {

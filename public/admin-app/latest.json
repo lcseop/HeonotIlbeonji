@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 35,
-  "versionName": "1.4.22",
-  "apkPath": "/admin-app/heonot-admin-1.4.22.apk",
-  "sha256": "af311187d1a5277d5b313589959ff9b07acdb4d23de722565cf05221783cef5b",
+  "versionCode": 36,
+  "versionName": "1.4.23",
+  "apkPath": "/admin-app/heonot-admin-1.4.23.apk",
+  "sha256": "7bb5bdb86666cd31a1bd577b7696d614aab763fea1a8cb1fd1768559ba050a06",
   "size": 4258417,
-  "releaseNotes": "비대면 수거 신청의 공동현관 비밀번호, 예금주, 은행을 상세 화면에 표시"
+  "releaseNotes": "비대면 수거 상세에 공동현관 출입 안내와 계좌번호 표시"
 }

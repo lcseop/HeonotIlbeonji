@@ -33,14 +33,17 @@ export async function submitDashboardPickup(request: Request, env: NodeJS.Proces
   const validation = validatePickup(data, now);
   if (validation.error) return privateJson(validation.error, 400);
   const pickup = validation.pickup;
-  const details = { entryCode: '', accountHolder: '', bankName: '' };
+  const details = { entryCode: '', accountHolder: '', bankName: '', accountNumber: '' };
   if (pickup.pickupMethod === '비대면 수거') {
-    for (const [field, label] of [['entryCode', '공동현관 비밀번호'], ['accountHolder', '예금주'], ['bankName', '은행']] as const) {
+    for (const [field, label, limit] of [['entryCode', '공동현관 출입 안내', 150], ['accountHolder', '예금주', 40], ['bankName', '은행', 40], ['accountNumber', '계좌번호', 40]] as const) {
       const value = data[field];
       if (value === undefined) continue;
-      if (typeof value !== 'string' || value.length > 40 || /[\u0000-\u001f\u007f]/.test(value))
-        return privateJson({ field, message: label + ' 항목은 한 줄에 40자 이내로 입력해 주세요.' }, 400);
-      details[field] = value.trim();
+      if (typeof value !== 'string' || value.length > limit || /[\u0000-\u001f\u007f]/.test(value))
+        return privateJson({ field, message: label + ' 항목은 한 줄에 ' + limit + '자 이내로 입력해 주세요.' }, 400);
+      const cleaned = value.trim();
+      if (field === 'accountNumber' && cleaned && !/^[0-9](?:[0-9 -]*[0-9])?$/.test(cleaned))
+        return privateJson({ field, message: '계좌번호는 숫자, 하이픈, 공백으로 입력해 주세요.' }, 400);
+      details[field] = cleaned;
     }
   }
   if (typeof data.token !== 'string' || !data.token || data.token.length > 2048) return privateJson({ message: '자동 입력 방지 확인을 완료해 주세요.' }, 400);

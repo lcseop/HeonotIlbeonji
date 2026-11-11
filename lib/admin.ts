@@ -20,7 +20,7 @@ export type PickupRecord = {
   customerFlag: '' | 'regular' | 'blacklist';
 };
 
-export type ContactlessDetails = { entryCode: string; accountHolder: string; bankName: string };
+export type ContactlessDetails = { entryCode: string; accountHolder: string; bankName: string; accountNumber: string };
 export type NewPickup = Pick<PickupRecord, 'name' | 'phone' | 'address' | 'amount' | 'date' | 'timeSlot' | 'pickupMethod' | 'message'> & Partial<ContactlessDetails>;
 
 export type CustomerMemo = {
@@ -68,10 +68,10 @@ async function prepareTables(db: D1Database) {
     reserved_time TEXT NOT NULL DEFAULT '', admin_note TEXT NOT NULL DEFAULT '',
     admin_note_updated_at INTEGER NOT NULL DEFAULT 0,
     traffic_source TEXT NOT NULL DEFAULT 'unknown',
-    entry_code TEXT NOT NULL DEFAULT '', account_holder TEXT NOT NULL DEFAULT '', bank_name TEXT NOT NULL DEFAULT ''
+    entry_code TEXT NOT NULL DEFAULT '', account_holder TEXT NOT NULL DEFAULT '', bank_name TEXT NOT NULL DEFAULT '', account_number TEXT NOT NULL DEFAULT ''
   )`).run();
   const columns = await db.prepare('PRAGMA table_info(pickup_requests)').all<{ name: string }>();
-  for (const column of ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source', 'entry_code', 'account_holder', 'bank_name']) {
+  for (const column of ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source', 'entry_code', 'account_holder', 'bank_name', 'account_number']) {
     if (columns.results.some(item => item.name === column)) continue;
     try {
       const definition = ['last_activity_at', 'admin_note_updated_at'].includes(column)
@@ -109,11 +109,11 @@ export async function savePickup(db: D1Database, pickup: NewPickup, requestId?: 
   const trafficSource = website ? (typeof source === 'string' && (trafficSources as readonly string[]).includes(source) ? source : 'unknown') : 'manual';
   const contactless = website && pickup.pickupMethod === '비대면 수거';
   const insert = db.prepare(`INSERT INTO pickup_requests
-    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at, traffic_source, entry_code, account_holder, bank_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
+    (id, created_at, name, phone, address, amount, date, time_slot, pickup_method, message, status, last_activity_at, traffic_source, entry_code, account_holder, bank_name, account_number)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, Date.now(), pickup.name, pickup.phone, pickup.address, pickup.amount, pickup.date,
       pickup.timeSlot, pickup.pickupMethod, pickup.message, Date.now(), trafficSource,
-      contactless ? pickup.entryCode ?? '' : '', contactless ? pickup.accountHolder ?? '' : '', contactless ? pickup.bankName ?? '' : '');
+      contactless ? pickup.entryCode ?? '' : '', contactless ? pickup.accountHolder ?? '' : '', contactless ? pickup.bankName ?? '' : '', contactless ? pickup.accountNumber ?? '' : '');
   if (website && typeof db.batch === 'function') {
     await ensureWebsiteStats(db);
     // Commit the accepted website request and its anonymous count together.
@@ -126,7 +126,7 @@ export async function listPickups(db: D1Database) {
   await ensureTables(db);
   const result = await db.prepare(`SELECT id, created_at, name, phone, address, amount, date,
     time_slot AS timeSlot, pickup_method AS pickupMethod, message, status, traffic_source AS trafficSource,
-    (pickup_method = '비대면 수거' AND (entry_code <> '' OR account_holder <> '' OR bank_name <> '')) AS hasContactlessDetails,
+    (pickup_method = '비대면 수거' AND (entry_code <> '' OR account_holder <> '' OR bank_name <> '' OR account_number <> '')) AS hasContactlessDetails,
     reserved_time AS reservedTime, admin_note AS adminNote, admin_note_updated_at AS adminNoteUpdatedAt
     , COALESCE((SELECT flag FROM customer_flags WHERE phone =
       CASE WHEN replace(replace(replace(replace(pickup_requests.phone, '-', ''), ' ', ''), '(', ''), ')', '') LIKE '+82%'
@@ -138,7 +138,7 @@ export async function listPickups(db: D1Database) {
 
 export async function getContactlessDetails(db: D1Database, id: string) {
   await ensureTables(db);
-  const result = await db.prepare(`SELECT entry_code AS entryCode, account_holder AS accountHolder, bank_name AS bankName
+  const result = await db.prepare(`SELECT entry_code AS entryCode, account_holder AS accountHolder, bank_name AS bankName, account_number AS accountNumber
     FROM pickup_requests WHERE id = ? AND pickup_method = '비대면 수거'`).bind(id).all<ContactlessDetails>();
   return result.results[0] ?? null;
 }

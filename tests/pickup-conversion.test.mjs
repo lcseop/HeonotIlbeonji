@@ -13,7 +13,7 @@ async function page(response, tracking = 'available', traffic = undefined, deliv
   const attrs={};const errors=[];let focused=false,scrolled=false;
   const phone={setAttribute:(name,value)=>{attrs[name]=value;},getAttribute:name=>attrs[name],removeAttribute:name=>{delete attrs[name];},
     closest:()=>({append:error=>errors.push(error)}),focus:()=>{focused=true;},scrollIntoView:()=>{scrolled=true;}};
-  const extra = {entryCode:{value:''},accountHolder:{value:''},bankName:{value:''}};
+  const extra = {entryCode:{value:''},accountHolder:{value:''},bankName:{value:''},accountNumber:{value:''}};
   const fieldset={hidden:true,disabled:true};
   const method={value:'',addEventListener:(_,fn)=>{listeners.method=fn;}};
   const form = {
@@ -93,6 +93,6 @@ test('contactless fields appear only for dashboard non-face-to-face requests and
  assert.equal(ui.fieldset.hidden,true);ui.select('비대면 수거');assert.equal(ui.fieldset.hidden,false);assert.equal(ui.fieldset.disabled,false);
  ui.extra.entryCode.value='0012#';ui.select('대면 수거');assert.equal(ui.extra.entryCode.value,'');assert.equal(ui.fieldset.disabled,true);
  await ui.submit();assert.equal(ui.payloads[0].entryCode,undefined);
- const nonFace=await page(accepted,'absent',undefined,'dashboard');nonFace.select('비대면 수거');nonFace.extra.entryCode.value='0012#';await nonFace.submit();assert.equal(nonFace.payloads[0].entryCode,'0012#');
+ const nonFace=await page(accepted,'absent',undefined,'dashboard');nonFace.select('비대면 수거');nonFace.extra.entryCode.value='0012#';nonFace.extra.accountNumber.value='001-234';await nonFace.submit();assert.equal(nonFace.payloads[0].entryCode,'0012#');assert.equal(nonFace.payloads[0].accountNumber,'001-234');
  const sms=await page(accepted,'absent',undefined,'sms');sms.select('비대면 수거');assert.equal(sms.fieldset.hidden,true);
 });

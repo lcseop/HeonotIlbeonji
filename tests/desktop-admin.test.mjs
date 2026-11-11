@@ -73,15 +73,16 @@ test('new requests retain coarse attribution, old rows remain unknown and retrie
 test('contactless website details are optional, scoped to authenticated detail data and cleared appropriately',async()=>{
  const {db,sql}=database();try{
   const env={SITE_ORIGIN:'https://pickup.example',ADMIN_PASSWORD:'fixture-password-long',ADMIN_SESSION_SECRET:'fixture-long-session-secret-test-only',TURNSTILE_SITE_KEY:'fixture',TURNSTILE_SECRET_KEY:'fixture'};
-  const form={name:'예시',phone:'01000000000',address:'예시로 1',amount:'20~30kg',date:'2026-11-12',timeSlot:'오후',pickupMethod:'비대면 수거',message:'',consent:true,token:'fixture',entryCode:'0012#',accountHolder:'예시',bankName:'예시은행'};
+  const form={name:'예시',phone:'01000000000',address:'예시로 1',amount:'20~30kg',date:'2026-11-12',timeSlot:'오후',pickupMethod:'비대면 수거',message:'',consent:true,token:'fixture',entryCode:'종 누르고 1235 눌러주세요',accountHolder:'예시',bankName:'예시은행',accountNumber:'0012-345 67'};
   const send=async()=>Response.json({success:true,hostname:'pickup.example',action:'pickup-request'});
   const submit=(data)=>submitDashboardPickup(new Request(env.SITE_ORIGIN+'/api/pickup',{method:'POST',headers:{Origin:env.SITE_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify(data)}),env,db,send,new Date('2026-11-11T03:00:00Z'));
   const bad=await submit({...form,entryCode:'bad\ncode'});assert.equal(bad.status,400);assert.equal((await bad.json()).field,'entryCode');
+  const badAccount=await submit({...form,accountNumber:'계좌 1234'});assert.equal(badAccount.status,400);assert.equal((await badAccount.json()).field,'accountNumber');
   assert.equal((await submit(form)).status,200);
   const [row]=await listPickups(db);assert.equal(row.hasContactlessDetails,1);assert.equal(row.entryCode,undefined);assert.equal(row.bankName,undefined);
-  assert.deepEqual({...await getContactlessDetails(db,row.id)},{entryCode:'0012#',accountHolder:'예시',bankName:'예시은행'});
-  const {rows,columns}=await readDesktopTable(db,'requests',0);assert.equal(rows[0].entry_code,undefined);assert.ok(!columns.includes('account_holder'));
-  await setPickupStatus(db,row.id,'done');assert.equal((await getContactlessDetails(db,row.id)).entryCode,'');assert.equal((await getContactlessDetails(db,row.id)).bankName,'예시은행');
+  assert.deepEqual({...await getContactlessDetails(db,row.id)},{entryCode:'종 누르고 1235 눌러주세요',accountHolder:'예시',bankName:'예시은행',accountNumber:'0012-345 67'});
+  const {rows,columns}=await readDesktopTable(db,'requests',0);assert.equal(rows[0].entry_code,undefined);assert.ok(!columns.includes('account_holder'));assert.ok(!columns.includes('account_number'));assert.equal(row.accountNumber,undefined);
+  await setPickupStatus(db,row.id,'done');assert.equal((await getContactlessDetails(db,row.id)).entryCode,'');assert.equal((await getContactlessDetails(db,row.id)).bankName,'예시은행');assert.equal((await getContactlessDetails(db,row.id)).accountNumber,'0012-345 67');
   assert.equal((await submit({...form,pickupMethod:'대면 수거'})).status,200);
   const face=(await listPickups(db)).find(r=>r.pickupMethod==='대면 수거');assert.equal(face.hasContactlessDetails,0);assert.equal(await getContactlessDetails(db,face.id),null);
   assert.equal(sql.prepare('SELECT entry_code FROM pickup_requests WHERE id=?').get(face.id).entry_code,'');

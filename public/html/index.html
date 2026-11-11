@@ -192,9 +192,10 @@
         <div class="form-row"><label>희망 시간대<select name="timeSlot" required><option value="">선택해 주세요</option><option>오전</option><option>오후</option><option>시간 협의</option></select></label><label>수거 방식<select name="pickupMethod" required><option value="">선택해 주세요</option><option>대면 수거</option><option value="비대면 수거">비대면 수거 - 권장</option></select></label></div>
         <fieldset id="contactlessFields" class="contactless-fields" hidden disabled>
           <legend>비대면 수거 정보 <small>선택 입력</small></legend>
-          <label>공동현관 비밀번호<input name="entryCode" type="password" autocomplete="off" maxlength="40" placeholder="공동현관 출입에 필요한 경우만 입력"></label>
+          <label>공동현관 출입 안내<input name="entryCode" type="text" autocomplete="off" maxlength="150" placeholder="예: 종 누르고 1235 눌러주세요"></label>
           <div class="form-row"><label>예금주<input name="accountHolder" maxlength="40" autocomplete="off" placeholder="예금주 이름"></label><label>은행<input name="bankName" maxlength="40" autocomplete="off" placeholder="은행 이름"></label></div>
-          <p>세대 출입 비밀번호는 입력하지 마세요. 공동현관 비밀번호는 수거 완료 처리 시 삭제됩니다.</p>
+          <label>계좌번호<input name="accountNumber" type="text" inputmode="numeric" autocomplete="off" maxlength="40" placeholder="계좌번호 숫자를 입력해 주세요"></label>
+          <p>세대 출입 비밀번호는 입력하지 마세요. 공동현관 출입 안내는 수거 완료 처리 시 삭제됩니다.</p>
         </fieldset>
         <p class="pickup-form-guide">헌옷은 20kg 이상<span class="pickup-weight-example">(ex: 파란색 김장용 비닐봉투 2개 &amp; 75L 종량제 봉투 2개 이상)</span>부터 수거합니다. 다른 물품은 ‘기타 품목 상담’을 선택하고, 품목·수량·연식 등을 아래에 적어 주세요. <a href="#pickup-guide">수거 기준 확인</a></p>
         <label>문의 내용<textarea name="message" rows="3" maxlength="350" placeholder="예: 헌옷 25kg, 책 3묶음 / 비대면 수거 희망"></textarea></label>
@@ -242,7 +243,7 @@
       <p class="section-label">PRIVACY</p>
       <h2 id="modalTitle">개인정보 수집·이용 안내</h2>
       <p>1번지는 수거 상담, 방문 일정 조율, 수거 서비스 제공 및 고객의 상담·수거 이력 관리를 위해 아래와 같이 개인정보를 수집·이용합니다.</p>
-      <section><h3>1. 수집하는 개인정보</h3><p>성함, 연락처, 수거 주소. 비대면 수거 시 공동현관 비밀번호, 예금주, 은행을 선택적으로 입력할 수 있습니다. 이 정보는 출입 및 정산 확인에 사용하며, 공동현관 비밀번호는 수거 완료 처리 시 삭제합니다.</p></section>
+      <section><h3>1. 수집하는 개인정보</h3><p>성함, 연락처, 수거 주소. 비대면 수거 시 공동현관 출입 안내, 예금주, 은행, 계좌번호를 선택적으로 입력할 수 있습니다. 이 정보는 출입 및 정산 확인에 사용하며, 공동현관 출입 안내는 수거 완료 처리 시 삭제합니다.</p></section>
       <section><h3>2. 수거 신청 및 상담 정보</h3><p>예상 수거량, 희망 날짜·시간대, 수거 방식, 문의 내용, 상담 및 수거 관련 메모, 상담·방문·수거 이력</p></section>
       <section><h3>3. 수집·이용 목적</h3><p>수거 상담 및 방문 일정 조율, 수거 서비스 제공, 재상담 및 재이용 고객 확인, 이전 상담·수거 이력 및 고객 요청사항 확인</p></section>
       <section><h3>4. 보유·이용 기간</h3><p>마지막 상담 또는 수거일로부터 10년간 보관한 후 파기합니다. 다만, 관계 법령에 따라 별도의 보존 의무가 있는 경우에는 해당 법령에서 정한 기간 동안 보관합니다.</p></section>

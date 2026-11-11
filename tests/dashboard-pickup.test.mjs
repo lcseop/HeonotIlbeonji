@@ -54,7 +54,7 @@ test('existing pickup records gain the new columns without clearing old rows', a
   }; } };
   await ensureTables(db);
   await ensureTables(db);
-  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source', 'entry_code', 'account_holder', 'bank_name']);
+  assert.deepEqual(changed, ['time_slot', 'pickup_method', 'last_activity_at', 'reserved_time', 'admin_note', 'admin_note_updated_at', 'traffic_source', 'entry_code', 'account_holder', 'bank_name', 'account_number']);
   assert.ok(columns.has('id'));
 });
 
@@ -73,7 +73,7 @@ test('verified request is saved once without calling Solapi', async () => {
   assert.equal(db.inserted[0][3], '01012345678');
   assert.equal(db.inserted[0][7], '오후');
   assert.equal(db.inserted[0][8], '비대면 수거');
-  assert.equal(db.inserted[0].at(-4), 'naver_ads');
+  assert.equal(db.inserted[0].at(-5), 'naver_ads');
   assert.equal(urls.length, 1);
 });
 

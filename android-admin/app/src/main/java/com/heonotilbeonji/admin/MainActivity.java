@@ -1239,9 +1239,10 @@ public final class MainActivity extends Activity {
                     if (!dialog.isShowing() || !token.equals(session())) return;
                     if (details == null) { note.setText("등록된 비대면 수거 정보가 없습니다."); return; }
                     section.removeView(note);
-                    detailLine(section, "공동현관 비밀번호", details.optString("entryCode"));
+                    detailLine(section, "공동현관 출입 안내", details.optString("entryCode"));
                     detailLine(section, "예금주", details.optString("accountHolder"));
                     detailLine(section, "은행", details.optString("bankName"));
+                    detailLine(section, "계좌번호", details.optString("accountNumber"));
                 });
             } catch (Exception error) {
                 runOnUiThread(() -> { if (dialog.isShowing()) note.setText("정보를 불러오지 못했습니다. 상세 화면을 다시 열어 주세요."); });

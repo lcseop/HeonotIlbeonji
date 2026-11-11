@@ -135,7 +135,7 @@ namespace HeonotDesk {
      if(!w.IsVisible)return;
      var data=Json.D(response,"details");if(data==null){note.Text="등록된 비대면 수거 정보가 없습니다.";return;}
      section.Children.Remove(note);
-     string[] keys={"entryCode","accountHolder","bankName"}, labels={"공동현관 비밀번호","예금주","은행"};
+     string[] keys={"entryCode","accountHolder","bankName","accountNumber"}, labels={"공동현관 출입 안내","예금주","은행","계좌번호"};
      for(int i=0;i<keys.Length;i++){string value=Json.S(data,keys[i]);Gap(section,Text(labels[i]+"  ·  "+(String.IsNullOrEmpty(value)?"미기재":value),14,"#18334E"),8);}
     }catch{if(w.IsVisible)note.Text="정보를 불러오지 못했습니다. 상세 화면을 다시 열어 주세요.";}
    };
