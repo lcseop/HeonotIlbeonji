@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 39,
-  "versionName": "1.4.26",
-  "apkPath": "/admin-app/heonot-admin-1.4.26.apk",
-  "sha256": "0783b9c7277dd4bc57684bd8b5258c719bbea5e2605087553ad999a0a070ffa9",
-  "size": 4258410,
-  "releaseNotes": "카카오내비 주소 확인 대화상자가 제목만 표시되는 문제 수정"
+  "versionCode": 40,
+  "versionName": "1.4.27",
+  "apkPath": "/admin-app/heonot-admin-1.4.27.apk",
+  "sha256": "da0b623b0067586e35b0c6bb4b046d0fdf3c7abeac68189a60ad1fc56853a371",
+  "size": 4258412,
+  "releaseNotes": "신청서 상세의 주소를 누르면 티맵에서 원문 주소 검색"
 }
