@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 40,
-  "versionName": "1.4.27",
-  "apkPath": "/admin-app/heonot-admin-1.4.27.apk",
-  "sha256": "da0b623b0067586e35b0c6bb4b046d0fdf3c7abeac68189a60ad1fc56853a371",
+  "versionCode": 41,
+  "versionName": "1.4.28",
+  "apkPath": "/admin-app/heonot-admin-1.4.28.apk",
+  "sha256": "8ca89283e6393d221c4f769ecfe0954c184c617f0be4d2d71dc515ebe014d2aa",
   "size": 4258412,
-  "releaseNotes": "신청서 상세의 주소를 누르면 티맵에서 원문 주소 검색"
+  "releaseNotes": "연락처 추가 시 이름 칸에 수거 주소 자동 입력"
 }

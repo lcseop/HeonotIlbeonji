@@ -1191,7 +1191,7 @@ public final class MainActivity extends Activity {
         contact.setOnClickListener(view -> {
             Intent intent = new Intent(Intent.ACTION_INSERT);
             intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
-            intent.putExtra(ContactsContract.Intents.Insert.NAME, name);
+            intent.putExtra(ContactsContract.Intents.Insert.NAME, fullAddress);
             intent.putExtra(ContactsContract.Intents.Insert.PHONE, phone);
             try { startActivity(intent); }
             catch (ActivityNotFoundException error) { Toast.makeText(this, "연락처 앱을 찾지 못했습니다.", Toast.LENGTH_SHORT).show(); }
