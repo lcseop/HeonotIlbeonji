@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 38,
-  "versionName": "1.4.25",
-  "apkPath": "/admin-app/heonot-admin-1.4.25.apk",
-  "sha256": "9123c1a6c285d79c30c88feb44cdf98d7475f02225cbfdb305dbb4bb8f4617eb",
-  "size": 4258411,
-  "releaseNotes": "신청서 주소를 누르면 위치를 확인하고 카카오내비로 목적지 연결"
+  "versionCode": 39,
+  "versionName": "1.4.26",
+  "apkPath": "/admin-app/heonot-admin-1.4.26.apk",
+  "sha256": "0783b9c7277dd4bc57684bd8b5258c719bbea5e2605087553ad999a0a070ffa9",
+  "size": 4258410,
+  "releaseNotes": "카카오내비 주소 확인 대화상자가 제목만 표시되는 문제 수정"
 }

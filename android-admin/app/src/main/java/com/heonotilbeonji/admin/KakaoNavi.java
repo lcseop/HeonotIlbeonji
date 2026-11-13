@@ -5,11 +5,18 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 final class KakaoNavi {
@@ -38,9 +45,33 @@ final class KakaoNavi {
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
+        // AlertDialog's wrap-content panel can measure an unloaded WebView at zero height.
+        FrameLayout panel = new FrameLayout(activity);
+        int height = Math.min(AdminPlanner.dp(activity, 320),
+                (int) (activity.getResources().getDisplayMetrics().heightPixels * .58f));
+        panel.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height));
+        TextView loading = new TextView(activity);
+        loading.setText("주소 확인 화면을 불러오는 중…");
+        loading.setGravity(Gravity.CENTER);
+        loading.setPadding(AdminPlanner.dp(activity, 16), 0, AdminPlanner.dp(activity, 16), 0);
+        loading.setBackgroundColor(android.graphics.Color.WHITE);
+        panel.addView(loading, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height));
         AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("카카오내비")
-                .setView(web).setNegativeButton("닫기", null).create();
+                .setView(panel).setNegativeButton("닫기", null).create();
+        Handler handler = new Handler(Looper.getMainLooper());
+        Runnable timeout = () -> {
+            if (!dialog.isShowing()) return;
+            web.stopLoading();
+            web.setVisibility(View.INVISIBLE);
+            loading.setText("주소 확인 화면을 불러오지 못했습니다. 닫고 다시 열어 주세요.");
+        };
         web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                if (!dialog.isShowing() || view.getVisibility() != View.VISIBLE
+                        || !PAGE.equals(Uri.parse(url).buildUpon().fragment(null).build().toString())) return;
+                handler.removeCallbacks(timeout);
+                loading.setVisibility(View.GONE);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handle(request.getUrl(), request.isForMainFrame());
             }
@@ -66,17 +97,18 @@ final class KakaoNavi {
             }
             private void fail() {
                 if (!dialog.isShowing()) return;
-                dialog.dismiss();
-                Toast.makeText(activity, "주소 검색을 열지 못했습니다. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_LONG).show();
+                handler.removeCallbacks(timeout);
+                timeout.run();
             }
         });
         dialog.setOnDismissListener(d -> {
+            handler.removeCallbacks(timeout);
             web.stopLoading();
-            if (web.getParent() instanceof android.view.ViewGroup)
-                ((android.view.ViewGroup) web.getParent()).removeView(web);
+            panel.removeView(web);
             web.destroy();
         });
         dialog.show();
+        handler.postDelayed(timeout, 15000);
         web.loadUrl(lookupPage(address).toString());
     }
 
