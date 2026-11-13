@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="strict-origin">
+<title>카카오내비 목적지 확인</title>
+<style>
+body{margin:0;padding:16px 20px 20px;font:16px/1.5 system-ui,sans-serif;color:#17324d;background:#fff}form{display:grid;gap:8px}input,button{box-sizing:border-box;width:100%;font:inherit;border-radius:8px;min-height:44px;padding:8px 12px}input{border:1px solid #8c9bad}button{border:0;background:#ffdf38;color:#192b3c;font-weight:700}button:disabled{opacity:.55}p{margin:12px 0;overflow-wrap:anywhere}#open{margin-top:8px}
+</style>
+<script src="../js/admin-navi.js" defer></script>
+</head>
+<body>
+<form id="search"><label for="address">수거 주소</label><input id="address" maxlength="150" autocomplete="off" required><button id="find" type="submit" disabled>주소 확인</button></form>
+<p id="status" role="status" aria-live="polite">카카오 지도에 연결하는 중…</p>
+<button id="open" type="button" hidden>카카오내비 열기</button>
+</body>
+</html>

@@ -1,9 +1,9 @@
 {
   "packageName": "com.heonotilbeonji.admin",
-  "versionCode": 37,
-  "versionName": "1.4.24",
-  "apkPath": "/admin-app/heonot-admin-1.4.24.apk",
-  "sha256": "76de0e5082890306c399719e0d3350f9c86286f9989fa9bcee8c3340303d4fcc",
-  "size": 4258414,
-  "releaseNotes": "은행과 계좌번호를 한 줄로 표시, 누르면 계좌번호 복사"
+  "versionCode": 38,
+  "versionName": "1.4.25",
+  "apkPath": "/admin-app/heonot-admin-1.4.25.apk",
+  "sha256": "9123c1a6c285d79c30c88feb44cdf98d7475f02225cbfdb305dbb4bb8f4617eb",
+  "size": 4258411,
+  "releaseNotes": "신청서 주소를 누르면 위치를 확인하고 카카오내비로 목적지 연결"
 }

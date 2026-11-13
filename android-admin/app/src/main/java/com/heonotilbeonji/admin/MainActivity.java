@@ -1144,8 +1144,8 @@ public final class MainActivity extends Activity {
             addressLink.setMinHeight(dp(48));
             addressLink.setGravity(Gravity.CENTER_VERTICAL);
             addressLink.setBackground(touchBackground(Color.WHITE, 8));
-            addressLink.setContentDescription("티맵에서 주소 검색: " + fullAddress);
-            addressLink.setOnClickListener(v -> TmapSearch.open(this, fullAddress));
+            addressLink.setContentDescription("카카오내비에서 목적지 열기: " + fullAddress);
+            addressLink.setOnClickListener(v -> KakaoNavi.open(this, fullAddress));
         }
         LinearLayout contactlessInfo = item.optInt("hasContactlessDetails") == 1
                 ? detailSection(body, "비대면 수거 정보") : null;
